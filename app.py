@@ -5,6 +5,7 @@ import io
 from datetime import datetime
 import matplotlib.gridspec as gridspec
 
+# Configuración de la página
 st.set_page_config(page_title="Honor of Kings - Gráficos de Rendimiento", layout="wide")
 st.title("Honor of Kings - Generador de Gráficos Radiales para eSports")
 st.markdown("""
@@ -55,7 +56,7 @@ def generar_grafico(datos, titulo, maximos):
 # Función para generar retroalimentación profesional
 def generar_feedback(valores_norm):
     feedback = []
-    dmg, rec, oro, part = valores_norm
+    dmg, rec, oro, part = valores_norm[:4]  # Aseguramos que solo haya 4 valores
 
     if dmg > 80:
         feedback.append("Daño infligido sobresaliente, demuestra gran presión en combate.")
