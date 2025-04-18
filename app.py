@@ -125,10 +125,14 @@ if submit:
 
     total_participacion = sum(participaciones)
 
+    # Ajuste de la normalización global
     maximos_globales = []
     for k in jugadores[0].keys():
         max_val = max(j[k] for j in jugadores)
         maximos_globales.append(max_val)
+    
+    # Agregar el valor máximo de la participación
+    maximos_globales.append(max(participaciones))
 
     st.subheader("Gráficos de Desempeño Individual")
     figs = []
@@ -161,29 +165,4 @@ if submit:
     fig_graficos.tight_layout()
     fig_graficos.savefig(buf_graficos, format="png", dpi=300, bbox_inches='tight')
 
-    fig_descripciones = plt.figure(figsize=(15, 10), facecolor='#0e1117')
-    spec = gridspec.GridSpec(3, 2, figure=fig_descripciones)
-
-    for i, (fig, rol, retro) in enumerate(figs):
-        ax = fig_descripciones.add_subplot(spec[i // 2, i % 2])
-        ax.axis('off')
-        ax.text(0.5, 0.95, f"{rol}", ha='center', va='top', color='#1DB954', fontsize=15, weight='bold')
-        ax.text(0.5, 0.85, retro, ha='center', va='top', color='white', fontsize=12, wrap=True)
-
-    buf_descripciones = io.BytesIO()
-    fig_descripciones.tight_layout()
-    fig_descripciones.savefig(buf_descripciones, format="png", dpi=300, bbox_inches='tight')
-
-    st.download_button(
-        label="📥 Descargar imagen con todos los gráficos",
-        data=buf_graficos.getvalue(),
-        file_name="Graficos_Honor_of_Kings.png",
-        mime="image/png"
-    )
-
-    st.download_button(
-        label="📥 Descargar imagen con todas las descripciones",
-        data=buf_descripciones.getvalue(),
-        file_name="Descripciones_Honor_of_Kings.png",
-        mime="image/png"
-    )
+    fig_descripciones = plt.figure(figsize=(15, 10), facecolor='#
