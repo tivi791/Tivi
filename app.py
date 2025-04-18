@@ -19,11 +19,15 @@ if "registro_partidas" not in st.session_state:
     st.session_state.registro_partidas = []
 
 # Funciones de procesamiento de gráficos y retroalimentación
-def generar_grafico(datos, titulo, maximos, mostrar_en_streamlit=False):
+def generar_grafico(datos, titulo, mostrar_en_streamlit=False):
     categorias = list(datos.keys())
     valores = list(datos.values())
-    valores_normalizados = [v / maximos[i] * 100 if maximos[i] != 0 else 0 for i, v in enumerate(valores)]
 
+    # Normalizar los valores
+    maximo = max(valores)
+    valores_normalizados = [v / maximo * 100 if maximo != 0 else 0 for v in valores]
+
+    # Ángulos para el gráfico radial
     N = len(categorias)
     angulos = [n / float(N) * 2 * pi for n in range(N)]
     valores_normalizados += valores_normalizados[:1]
@@ -44,7 +48,7 @@ def generar_grafico(datos, titulo, maximos, mostrar_en_streamlit=False):
         buf = io.BytesIO()
         plt.savefig(buf, format='png')
         buf.seek(0)
-        return buf, valores_normalizados
+        return buf
 
 def generar_feedback(valores_norm):
     dmg, rec, oro, part = valores_norm[:4]
@@ -114,7 +118,7 @@ if partidas_hoy:
         promedio = {k: v / partidas_totales for k, v in datos.items()}
         maximos = list(promedio.values())
         # Mostrar el gráfico en Streamlit
-        generar_grafico(promedio, f"Promedio del día - {rol}", maximos, mostrar_en_streamlit=True)
+        generar_grafico(promedio, f"Promedio del día - {rol}", mostrar_en_streamlit=True)
         st.markdown(f"**Análisis:** {generar_feedback(maximos)}")
 
     # Crear un DataFrame para descargar el CSV
@@ -151,7 +155,7 @@ if st.button("Generar Informe en PDF"):
 
         # Generar el gráfico en memoria y agregarlo al PDF
         promedio = {k: v for k, v in datos.items()}  # Aseguramos que los datos sean un diccionario
-        fig_buf, _ = generar_grafico(promedio, f"Promedio del día - {partida['fecha']}", list(promedio.values()), mostrar_en_streamlit=False)
+        fig_buf = generar_grafico(promedio, f"Promedio del día - {partida['fecha']}", mostrar_en_streamlit=False)
         
         # Guardar la imagen en un archivo temporal
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
