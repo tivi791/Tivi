@@ -139,7 +139,8 @@ if st.button("Generar Informe en PDF"):
 
     # Guardar el PDF en memoria
     buffer_pdf = io.BytesIO()
-    pdf.output(buffer_pdf)
+    pdf_output = pdf.output(dest='S').encode()  # En lugar de 'output(buffer_pdf)', obtenemos los datos en memoria
+    buffer_pdf.write(pdf_output)  # Escribimos el contenido del PDF en el buffer
     buffer_pdf.seek(0)
 
     # Proporcionar el archivo PDF para la descarga
