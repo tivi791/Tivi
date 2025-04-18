@@ -2,7 +2,6 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from math import pi
 import io
-from datetime import datetime
 import matplotlib.gridspec as gridspec
 
 # Configuración de la página
@@ -14,7 +13,6 @@ st.markdown("""
     .stApp {
         background-color: #0e1117;
         color: #FFFFFF;
-        font-family: 'Poppins', sans-serif;
     }
     h1, h2, h3, h4 {
         color: #1DB954;
@@ -26,18 +24,6 @@ st.markdown("""
         margin-top: 1em;
         color: white;
         font-size: 1em;
-        line-height: 1.5;
-    }
-    .stButton>button {
-        background-color: #1DB954;
-        color: white;
-        border-radius: 10px;
-        padding: 10px 20px;
-        font-size: 1em;
-        font-weight: bold;
-    }
-    .stButton>button:hover {
-        background-color: #1a9d44;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -113,7 +99,7 @@ with st.form("form_jugadores"):
         with col3:
             oro = st.number_input(f"Oro Total {rol} (mil)", min_value=0, value=0, key=f"oro_{i}")
         with col4:
-            participacion = st.number_input(f"Participación {rol} (%)", min_value=0, value=0, key=f"part_{i}")  
+            participacion = st.number_input(f"Participación {rol} (%)", min_value=0, value=0, key=f"part_{i}")  # Se eliminó el límite
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -127,6 +113,7 @@ with st.form("form_jugadores"):
     submit = st.form_submit_button("Generar Gráficos")
 
 if submit:
+    # Ya no se necesita validar la suma de las participaciones
     for i in range(5):
         jugadores[i]["Participación"] = participaciones[i]
 
@@ -139,6 +126,7 @@ if submit:
     figs = []
     feedbacks = []
 
+    # Crear gráficos para cada jugador
     for i, jugador in enumerate(jugadores):
         fig, valores_normalizados = generar_grafico(jugador, roles[i], maximos_globales)
         feedback = generar_feedback(valores_normalizados, roles[i])
@@ -146,6 +134,7 @@ if submit:
         st.markdown(f"<div class='feedback'>{feedback}</div>", unsafe_allow_html=True)
         figs.append((fig, roles[i], feedback))
 
+    # Crear un gráfico combinado de todos los jugadores
     fig_graficos = plt.figure(figsize=(15, 10), facecolor='#0e1117')
     spec = gridspec.GridSpec(3, 2, figure=fig_graficos)
 
@@ -168,16 +157,18 @@ if submit:
     fig_descripciones = plt.figure(figsize=(15, 10), facecolor='#0e1117')
     spec = gridspec.GridSpec(3, 2, figure=fig_descripciones)
 
+    # Crear gráficos con las descripciones de cada jugador
     for i, (fig, rol, retro) in enumerate(figs):
         ax = fig_descripciones.add_subplot(spec[i // 2, i % 2])
         ax.axis('off')
         ax.text(0.5, 0.95, f"{rol}", ha='center', va='top', color='#1DB954', fontsize=15, weight='bold')
-        ax.text(0.5, 0.85, retro, ha='center', va='top', color='white', fontsize=12)
+        ax.text(0.5, 0.85, retro, ha='center', va='top', color='white', fontsize=12, wrap=True)
 
     buf_descripciones = io.BytesIO()
     fig_descripciones.tight_layout()
     fig_descripciones.savefig(buf_descripciones, format="png", dpi=300, bbox_inches='tight')
 
+    # Botones de descarga
     st.download_button(
         label="📥 Descargar imagen con todos los gráficos",
         data=buf_graficos.getvalue(),
