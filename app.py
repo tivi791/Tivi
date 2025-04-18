@@ -2,9 +2,9 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from math import pi
 import io
+import base64
 import pandas as pd
 from datetime import datetime
-import base64  # Importar base64
 
 # Configuración de la página
 st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide")
@@ -101,6 +101,8 @@ st.write(f"Total de partidas hoy: {len(partidas_hoy)}")
 
 if partidas_hoy:
     acumulado = {rol: {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0} for rol in roles}
+    resumen_general = []
+
     for partida in partidas_hoy:
         for i, datos in enumerate(partida["datos"]):
             for k in datos:
@@ -110,7 +112,8 @@ if partidas_hoy:
     html_contenido = f"<h2>Resumen Diario - {fecha_actual}</h2>"
     html_contenido += f"<p>Total de partidas hoy: {len(partidas_hoy)}</p>"
 
-    for i, rol in enumerate(roles):
+    # Resumen general de todas las partidas
+    for rol in roles:
         datos = acumulado[rol]
         partidas_totales = len(partidas_hoy)
         promedio = {k: v / partidas_totales for k, v in datos.items()}
@@ -130,6 +133,20 @@ if partidas_hoy:
         html_contenido += f"</ul>"
         html_contenido += f"<img src='data:image/png;base64,{grafico_base64}' width='500'/>"
         html_contenido += f"<p><b>Análisis:</b> {generar_feedback(maximos)}</p>"
+
+        # Resumen general de la partida
+        resumen_general.append(f"En {rol}, el rendimiento promedio fue:")
+        resumen_general.append(f"• Daño Infligido: {promedio['Daño Infligido']:.2f}")
+        resumen_general.append(f"• Daño Recibido: {promedio['Daño Recibido']:.2f}")
+        resumen_general.append(f"• Oro Total: {promedio['Oro Total']:.2f}")
+        resumen_general.append(f"• Participación: {promedio['Participación']:.2f}")
+
+    # Mostrar resumen general al final
+    html_contenido += "<h3>Resumen General de todas las partidas jugadas:</h3>"
+    html_contenido += "<ul>"
+    for item in resumen_general:
+        html_contenido += f"<li>{item}</li>"
+    html_contenido += "</ul>"
 
     st.markdown(html_contenido, unsafe_allow_html=True)
 
