@@ -2,7 +2,6 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from math import pi
 import io
-from datetime import datetime
 import matplotlib.gridspec as gridspec
 
 # Configuración de la página
@@ -60,30 +59,30 @@ def generar_feedback(valores_norm, rol):
 
     # Retroalimentación según Daño Infligido
     if dmg > 80:
-        feedback.append("Daño infligido sobresaliente, demuestra gran presión en combate.")
+        feedback.append("Daño infligido alto.")
     elif dmg < 40:
-        feedback.append("Daño infligido bajo, considera mejorar tu posicionamiento y toma de peleas.")
+        feedback.append("Daño infligido bajo.")
 
     # Retroalimentación según Daño Recibido
     if rec < 40:
-        feedback.append("Buena gestión de daño recibido, uso efectivo del posicionamiento.")
+        feedback.append("Buen control del daño recibido.")
     elif rec > 80:
-        feedback.append("Demasiado daño recibido, considera mejorar la toma de decisiones defensivas.")
+        feedback.append("Demasiado daño recibido.")
 
     # Retroalimentación según Oro Total
     if oro > 70:
-        feedback.append("Buena economía, demuestra un farmeo eficiente.")
+        feedback.append("Buena economía.")
     elif oro < 30:
-        feedback.append("Economía baja, considera enfocarte más en farmeo o control de mapa.")
+        feedback.append("Economía baja.")
 
     # Retroalimentación según Participación
     if part > 70:
-        feedback.append("Excelente participación en equipo, clave para el control de partidas.")
+        feedback.append("Gran participación en equipo.")
     elif part < 30:
-        feedback.append("Baja participación, es importante estar más presente en objetivos y peleas.")
+        feedback.append("Baja participación.")
 
     # Descripción general de cada rol
-    feedback.append(f"<b>Descripción {rol}:</b> Este rol es crucial para el control de los objetivos y el rendimiento global del equipo. Es importante que mantengas una buena comunicación y un control adecuado del mapa para maximizar el impacto durante la partida.")
+    feedback.append(f"Rol: {rol} - Importante para el control de los objetivos y la estrategia del equipo.")
     
     return "\n".join(feedback)
 
@@ -140,7 +139,7 @@ if submit:
             figs.append((fig, roles[i], feedback))
 
         # Crear figura compuesta para descarga
-        fig_final = plt.figure(figsize=(15, 12), facecolor='#0e1117')  # Ajustar el tamaño de la figura
+        fig_final = plt.figure(figsize=(15, 10), facecolor='#0e1117')  # Ajustar el tamaño de la figura
         spec = gridspec.GridSpec(3, 2, figure=fig_final)  # Cambiar la distribución de los gráficos
 
         for i, (fig, rol, retro) in enumerate(figs):
@@ -156,7 +155,7 @@ if submit:
             ax.set_title(rol, color='white')
 
             # Ajustar posición del texto para que no se cruce
-            ax.text(0.5, 1.2, retro, horizontalalignment='center', verticalalignment='center', color='white', fontsize=9, transform=ax.transAxes, wrap=True)
+            ax.text(0.5, 1.1, retro, horizontalalignment='center', verticalalignment='center', color='white', fontsize=8, transform=ax.transAxes, wrap=True)
 
         # Guardar imagen como PNG
         buf = io.BytesIO()
