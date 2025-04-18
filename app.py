@@ -17,8 +17,7 @@ if "registro_partidas" not in st.session_state:
     st.session_state.registro_partidas = []
 
 # Funciones de procesamiento de gráficos y retroalimentación
-def generar_grafico(datos, titulo):
-    categorias = list(datos.keys())
+def generar_grafico(datos, titulo, categorias):
     valores = list(datos.values())
 
     # Normalizar los valores
@@ -31,17 +30,18 @@ def generar_grafico(datos, titulo):
     valores_normalizados += valores_normalizados[:1]
     angulos += angulos[:1]
 
-    fig, ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(polar=True))
-    ax.plot(angulos, valores_normalizados, color='#1DB954', linewidth=2)
-    ax.fill(angulos, valores_normalizados, color='#1DB954', alpha=0.3)
+    fig, ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(polar=True))
+    ax.plot(angulos, valores_normalizados, color='#007ACC', linewidth=2, label="Desempeño")
+    ax.fill(angulos, valores_normalizados, color='#007ACC', alpha=0.3)
     ax.set_xticks(angulos[:-1])
-    ax.set_xticklabels(categorias, fontsize=12)
-    ax.set_yticklabels([])
-    ax.set_title(titulo, size=14, weight='bold', pad=20)
+    ax.set_xticklabels(categorias, fontsize=12, fontweight='bold')
+    ax.set_yticklabels([])  # Eliminamos las etiquetas en el eje Y
+    ax.set_title(titulo, size=16, weight='bold', pad=20)
+    ax.legend(loc='upper right')
 
     # Guardamos el gráfico en un buffer para usarlo en HTML
     buf = io.BytesIO()
-    plt.savefig(buf, format='png')
+    plt.savefig(buf, format='png', bbox_inches='tight')
     buf.seek(0)
     return buf
 
@@ -117,14 +117,22 @@ if partidas_hoy:
         maximos = list(promedio.values())
 
         # Agregar el gráfico
-        grafico_buf = generar_grafico(promedio, f"Promedio del día - {rol}")
+        categorias = list(promedio.keys())
+        grafico_buf = generar_grafico(promedio, f"Promedio del día - {rol}", categorias)
         grafico_base64 = base64.b64encode(grafico_buf.read()).decode('utf-8')
 
+        # Agregar la información y el gráfico
         html_contenido += f"<h3>{rol}</h3>"
+        html_contenido += f"<p><b>Datos:</b></p>"
+        html_contenido += f"<ul>"
+        for k, v in promedio.items():
+            html_contenido += f"<li><b>{k}:</b> {v:.2f}</li>"
+        html_contenido += f"</ul>"
         html_contenido += f"<img src='data:image/png;base64,{grafico_base64}' width='500'/>"
         html_contenido += f"<p><b>Análisis:</b> {generar_feedback(maximos)}</p>"
 
     st.markdown(html_contenido, unsafe_allow_html=True)
+
     # Opción para descargar el informe en formato HTML
     st.download_button(
         label="Descargar Informe en HTML",
