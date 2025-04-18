@@ -100,7 +100,7 @@ with st.form("form_jugadores"):
         with col3:
             oro = st.number_input(f"Oro Total {rol} (mil)", min_value=0, value=0, key=f"oro_{i}")
         with col4:
-            participacion = st.slider(f"Participación {rol} (%)", min_value=0, max_value=100, value=0, key=f"part_{i}")
+            participacion = st.number_input(f"Participación {rol} (%)", min_value=0, value=0, key=f"part_{i}")  # Se eliminó el límite
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -114,72 +114,68 @@ with st.form("form_jugadores"):
     submit = st.form_submit_button("Generar Gráficos")
 
 if submit:
-    total_participacion = sum(participaciones)
+    # Ya no se necesita validar la suma de las participaciones
+    for i in range(5):
+        jugadores[i]["Participación"] = participaciones[i]
 
-    if total_participacion != 100:
-        st.error("La suma de las participaciones debe ser 100% para poder graficar correctamente.")
-    else:
-        for i in range(5):
-            jugadores[i]["Participación"] = participaciones[i]
+    maximos_globales = []
+    for k in jugadores[0].keys():
+        max_val = max(j[k] for j in jugadores)
+        maximos_globales.append(max_val)
 
-        maximos_globales = []
-        for k in jugadores[0].keys():
-            max_val = max(j[k] for j in jugadores)
-            maximos_globales.append(max_val)
+    st.subheader("Gráficos de Desempeño Individual")
+    figs = []
+    feedbacks = []
 
-        st.subheader("Gráficos de Desempeño Individual")
-        figs = []
-        feedbacks = []
+    for i, jugador in enumerate(jugadores):
+        fig, valores_normalizados = generar_grafico(jugador, roles[i], maximos_globales)
+        feedback = generar_feedback(valores_normalizados, roles[i])
+        st.pyplot(fig)
+        st.markdown(f"<div class='feedback'>{feedback}</div>", unsafe_allow_html=True)
+        figs.append((fig, roles[i], feedback))
 
-        for i, jugador in enumerate(jugadores):
-            fig, valores_normalizados = generar_grafico(jugador, roles[i], maximos_globales)
-            feedback = generar_feedback(valores_normalizados, roles[i])
-            st.pyplot(fig)
-            st.markdown(f"<div class='feedback'>{feedback}</div>", unsafe_allow_html=True)
-            figs.append((fig, roles[i], feedback))
+    fig_graficos = plt.figure(figsize=(15, 10), facecolor='#0e1117')
+    spec = gridspec.GridSpec(3, 2, figure=fig_graficos)
 
-        fig_graficos = plt.figure(figsize=(15, 10), facecolor='#0e1117')
-        spec = gridspec.GridSpec(3, 2, figure=fig_graficos)
+    for i, (fig, rol, retro) in enumerate(figs):
+        ax = fig_graficos.add_subplot(spec[i // 2, i % 2], polar=True)
+        fig_axes = fig.get_axes()[0]
+        for line in fig_axes.get_lines():
+            ax.plot(line.get_xdata(), line.get_ydata(), color=line.get_color(), linewidth=2)
+        for patch in fig_axes.collections:
+            ax.fill(patch.get_paths()[0].vertices[:, 0], patch.get_paths()[0].vertices[:, 1], color=patch.get_facecolor()[0], alpha=0.3)
+        ax.set_xticks(fig_axes.get_xticks())
+        ax.set_xticklabels(fig_axes.get_xticklabels(), color='white', fontsize=12)
+        ax.set_yticklabels([])
+        ax.set_title(rol, color='white', fontsize=16)
 
-        for i, (fig, rol, retro) in enumerate(figs):
-            ax = fig_graficos.add_subplot(spec[i // 2, i % 2], polar=True)
-            fig_axes = fig.get_axes()[0]
-            for line in fig_axes.get_lines():
-                ax.plot(line.get_xdata(), line.get_ydata(), color=line.get_color(), linewidth=2)
-            for patch in fig_axes.collections:
-                ax.fill(patch.get_paths()[0].vertices[:, 0], patch.get_paths()[0].vertices[:, 1], color=patch.get_facecolor()[0], alpha=0.3)
-            ax.set_xticks(fig_axes.get_xticks())
-            ax.set_xticklabels(fig_axes.get_xticklabels(), color='white', fontsize=12)
-            ax.set_yticklabels([])
-            ax.set_title(rol, color='white', fontsize=16)
+    buf_graficos = io.BytesIO()
+    fig_graficos.tight_layout()
+    fig_graficos.savefig(buf_graficos, format="png", dpi=300, bbox_inches='tight')
 
-        buf_graficos = io.BytesIO()
-        fig_graficos.tight_layout()
-        fig_graficos.savefig(buf_graficos, format="png", dpi=300, bbox_inches='tight')
+    fig_descripciones = plt.figure(figsize=(15, 10), facecolor='#0e1117')  # Línea corregida
+    spec = gridspec.GridSpec(3, 2, figure=fig_descripciones)
 
-        fig_descripciones = plt.figure(figsize=(15, 10), facecolor='#0e1117')  # Línea corregida
-        spec = gridspec.GridSpec(3, 2, figure=fig_descripciones)
+    for i, (fig, rol, retro) in enumerate(figs):
+        ax = fig_descripciones.add_subplot(spec[i // 2, i % 2])
+        ax.axis('off')
+        ax.text(0.5, 0.95, f"{rol}", ha='center', va='top', color='#1DB954', fontsize=15, weight='bold')
+        ax.text(0.5, 0.85, retro, ha='center', va='top', color='white', fontsize=12, wrap=True)
 
-        for i, (fig, rol, retro) in enumerate(figs):
-            ax = fig_descripciones.add_subplot(spec[i // 2, i % 2])
-            ax.axis('off')
-            ax.text(0.5, 0.95, f"{rol}", ha='center', va='top', color='#1DB954', fontsize=15, weight='bold')
-            ax.text(0.5, 0.85, retro, ha='center', va='top', color='white', fontsize=12, wrap=True)
+    buf_descripciones = io.BytesIO()
+    fig_descripciones.tight_layout()
+    fig_descripciones.savefig(buf_descripciones, format="png", dpi=300, bbox_inches='tight')
 
-        buf_descripciones = io.BytesIO()
-        fig_descripciones.tight_layout()
-        fig_descripciones.savefig(buf_descripciones, format="png", dpi=300, bbox_inches='tight')
+    st.download_button(
+        label="📥 Descargar imagen con todos los gráficos",
+        data=buf_graficos.getvalue(),
+        file_name="Graficos_Honor_of_Kings.png",
+        mime="image/png"
+    )
 
-        st.download_button(
-            label="📥 Descargar imagen con todos los gráficos",
-            data=buf_graficos.getvalue(),
-            file_name="Graficos_Honor_of_Kings.png",
-            mime="image/png"
-        )
-
-        st.download_button(
-            label="📥 Descargar imagen con todas las descripciones",
-            data=buf_descripciones.getvalue(),
-            file_name="Descripciones_Honor_of_Kings.png",
-            mime="image/png"
-        )
+    st.download_button(
+        label="📥 Descargar imagen con todas las descripciones",
+        data=buf_descripciones.getvalue(),
+        file_name="Descripciones_Honor_of_Kings.png",
+        mime="image/png"
+    )
