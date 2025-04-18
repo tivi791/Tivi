@@ -20,16 +20,17 @@ if "registro_partidas" not in st.session_state:
 def generar_grafico(datos, titulo, categorias):
     valores = list(datos.values())
 
-    # Normalizar los valores
+    # Normalizamos los valores
     maximo = max(valores)
     valores_normalizados = [v / maximo * 100 if maximo != 0 else 0 for v in valores]
 
-    # Ángulos para el gráfico radial
+    # Aseguramos que todos los valores se normalicen y reflejen adecuadamente en la gráfica
     N = len(categorias)
     angulos = [n / float(N) * 2 * pi for n in range(N)]
     valores_normalizados += valores_normalizados[:1]
     angulos += angulos[:1]
 
+    # Crear el gráfico radial
     fig, ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(polar=True))
     ax.plot(angulos, valores_normalizados, color='#007ACC', linewidth=2, label="Desempeño")
     ax.fill(angulos, valores_normalizados, color='#007ACC', alpha=0.3)
