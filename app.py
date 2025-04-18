@@ -2,11 +2,8 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from math import pi
 import io
-from datetime import datetime
 import pandas as pd
-import os
-from fpdf import FPDF
-import tempfile
+from datetime import datetime
 
 # Configuración de la página
 st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide")
@@ -19,7 +16,7 @@ if "registro_partidas" not in st.session_state:
     st.session_state.registro_partidas = []
 
 # Funciones de procesamiento de gráficos y retroalimentación
-def generar_grafico(datos, titulo, mostrar_en_streamlit=False):
+def generar_grafico(datos, titulo):
     categorias = list(datos.keys())
     valores = list(datos.values())
 
@@ -41,14 +38,11 @@ def generar_grafico(datos, titulo, mostrar_en_streamlit=False):
     ax.set_yticklabels([])
     ax.set_title(titulo, size=14, weight='bold', pad=20)
 
-    if mostrar_en_streamlit:
-        st.pyplot(fig)
-    else:
-        # Guardamos la imagen en memoria
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png')
-        buf.seek(0)
-        return buf
+    # Guardamos el gráfico en un buffer para usarlo en HTML
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    return buf
 
 def generar_feedback(valores_norm):
     dmg, rec, oro, part = valores_norm[:4]
@@ -111,74 +105,29 @@ if partidas_hoy:
             for k in datos:
                 acumulado[roles[i]][k] += datos[k]
 
+    # Generar informe en HTML
+    html_contenido = f"<h2>Resumen Diario - {fecha_actual}</h2>"
+    html_contenido += f"<p>Total de partidas hoy: {len(partidas_hoy)}</p>"
+
     for i, rol in enumerate(roles):
-        st.markdown(f"### {rol}")
         datos = acumulado[rol]
         partidas_totales = len(partidas_hoy)
         promedio = {k: v / partidas_totales for k, v in datos.items()}
         maximos = list(promedio.values())
-        # Mostrar el gráfico en Streamlit
-        generar_grafico(promedio, f"Promedio del día - {rol}", mostrar_en_streamlit=True)
-        st.markdown(f"**Análisis:** {generar_feedback(maximos)}")
 
-    # Crear un DataFrame para descargar el CSV
-    df = []
-    for partida in partidas_hoy:
-        fila = {"Fecha": partida['fecha']}
-        for i, datos in enumerate(partida['datos']):
-            for k, v in datos.items():
-                fila[f"{roles[i]} - {k}"] = v
-        df.append(fila)
+        # Agregar el gráfico
+        grafico_buf = generar_grafico(promedio, f"Promedio del día - {rol}")
+        grafico_base64 = base64.b64encode(grafico_buf.read()).decode('utf-8')
 
-    df_final = pd.DataFrame(df)
-    st.download_button("Descargar Resumen Diario (.csv)", data=df_final.to_csv(index=False), file_name="resumen_dia.csv", mime="text/csv")
+        html_contenido += f"<h3>{rol}</h3>"
+        html_contenido += f"<img src='data:image/png;base64,{grafico_base64}' width='500'/>"
+        html_contenido += f"<p><b>Análisis:</b> {generar_feedback(maximos)}</p>"
 
-# Generar PDF con todas las partidas del día
-if st.button("Generar Informe en PDF"):
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-    
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, f"Resumen Diario - {fecha_actual}", ln=True, align="C")
-    
-    for partida in partidas_hoy:
-        pdf.add_page()
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(0, 10, f"Partida - {partida['fecha']}", ln=True)
-        
-        for i, datos in enumerate(partida["datos"]):
-            pdf.set_font("Arial", '', 12)
-            pdf.cell(0, 10, f"{roles[i]} - Daño Infligido: {datos['Daño Infligido']} | Daño Recibido: {datos['Daño Recibido']} | Oro Total: {datos['Oro Total']} | Participación: {datos['Participación']}%", ln=True)
-
-        pdf.ln(5)
-
-        # Generar el gráfico en memoria y agregarlo al PDF
-        promedio = {k: v for k, v in datos.items()}  # Aseguramos que los datos sean un diccionario
-        fig_buf = generar_grafico(promedio, f"Promedio del día - {partida['fecha']}", mostrar_en_streamlit=False)
-        
-        # Guardar la imagen en un archivo temporal
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-        fig_buf.seek(0)
-        with open(temp_file.name, "wb") as f:
-            f.write(fig_buf.read())
-        
-        # Añadir la imagen al PDF
-        pdf.image(temp_file.name, x=10, y=pdf.get_y(), w=180)  # Ajusta la posición y el tamaño de la imagen
-
-        # Eliminar el archivo temporal después de usarlo
-        os.remove(temp_file.name)
-
-    # Guardar el PDF en memoria
-    buffer_pdf = io.BytesIO()
-    pdf_output = pdf.output(dest='S').encode()  # En lugar de 'output(buffer_pdf)', obtenemos los datos en memoria
-    buffer_pdf.write(pdf_output)  # Escribimos el contenido del PDF en el buffer
-    buffer_pdf.seek(0)
-
-    # Proporcionar el archivo PDF para la descarga
+    st.markdown(html_contenido, unsafe_allow_html=True)
+    # Opción para descargar el informe en formato HTML
     st.download_button(
-        label="Descargar Informe en PDF",
-        data=buffer_pdf,
-        file_name="Informe_Honor_of_Kings.pdf",
-        mime="application/pdf"
+        label="Descargar Informe en HTML",
+        data=html_contenido,
+        file_name="informe_honor_of_kings.html",
+        mime="text/html"
     )
