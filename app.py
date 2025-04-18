@@ -7,6 +7,7 @@ import matplotlib.gridspec as gridspec
 
 # Configuración de la página
 st.set_page_config(page_title="Honor of Kings - Gráficos de Rendimiento", layout="wide")
+st.image("https://upload.wikimedia.org/wikipedia/commons/3/33/Honor_of_Kings_logo.png", width=120)
 st.title("Honor of Kings - Generador de Gráficos Radiales para eSports")
 st.markdown("""
 <style>
@@ -28,7 +29,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-roles = ["TOPLANER", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
+roles = ["🌟 TOPLANER", "🐉 JUNGLER", "🧠 MIDLANER", "🏹 ADCARRY", "🛡 SUPPORT"]
 
 # Función para generar gráfico radial con diseño profesional
 def generar_grafico(datos, titulo, maximos):
@@ -48,36 +49,35 @@ def generar_grafico(datos, titulo, maximos):
     ax.plot(angulos, valores_normalizados, color='#1DB954', linewidth=2)
     ax.fill(angulos, valores_normalizados, color='#1DB954', alpha=0.3)
     ax.set_xticks(angulos[:-1])
-    ax.set_xticklabels(categorias, color='white', fontsize=12)
+    ax.set_xticklabels(categorias, color='white', fontsize=13)
     ax.set_yticklabels([])
-    ax.set_title(titulo, color='white', size=14)
+    ax.set_title(titulo, color='white', size=16, weight='bold', pad=20)
     return fig, valores_normalizados
 
 # Función para generar retroalimentación profesional
-
 def generar_feedback(valores_norm, rol):
-    feedback = [f"**{rol}**"]
+    feedback = [f"{rol}"]
     dmg, rec, oro, part = valores_norm[:4]
 
     if dmg > 80:
-        feedback.append("Daño infligido sobresaliente, demuestra gran presión en combate.")
+        feedback.append("• Daño infligido sobresaliente, gran presión en combate.")
     elif dmg < 40:
-        feedback.append("Daño infligido bajo, considera mejorar tu posicionamiento y toma de peleas.")
+        feedback.append("• Daño infligido bajo, mejorar posicionamiento y toma de peleas.")
 
     if rec < 40:
-        feedback.append("Buena gestión de daño recibido, uso efectivo del posicionamiento.")
+        feedback.append("• Buena gestión del daño recibido.")
     elif rec > 80:
-        feedback.append("Demasiado daño recibido, considera mejorar la toma de decisiones defensivas.")
+        feedback.append("• Exceso de daño recibido, mejora en decisiones defensivas.")
 
     if oro > 70:
-        feedback.append("Buena economía, demuestra un farmeo eficiente.")
+        feedback.append("• Economía sólida, buen control de recursos.")
     elif oro < 30:
-        feedback.append("Economía baja, considera enfocarte más en farmeo o control de mapa.")
+        feedback.append("• Economía baja, enfocar en farmeo y control de mapa.")
 
     if part > 70:
-        feedback.append("Excelente participación en equipo, clave para el control de partidas.")
+        feedback.append("• Participación destacada en objetivos y peleas.")
     elif part < 30:
-        feedback.append("Baja participación, es importante estar más presente en objetivos y peleas.")
+        feedback.append("• Participación baja, integrarse más al juego en equipo.")
 
     return "\n".join(feedback)
 
@@ -86,7 +86,11 @@ participaciones = []
 
 with st.form("form_jugadores"):
     for i, rol in enumerate(roles):
-        st.subheader(f"{rol}")
+        st.markdown(f"""
+        <div style='background-color: #1a1a1a; padding: 15px; border-radius: 10px; margin-bottom: 20px;'>
+        <h3 style='color:#1DB954;'>{rol}</h3>
+        """, unsafe_allow_html=True)
+
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
@@ -97,6 +101,8 @@ with st.form("form_jugadores"):
             oro = st.number_input(f"Oro Total {rol} (mil)", min_value=0, value=0, key=f"oro_{i}")
         with col4:
             participacion = st.slider(f"Participación {rol} (%)", min_value=0, max_value=100, value=0, key=f"part_{i}")
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
         jugadores.append({
             "Daño Infligido": dmg_inf,
@@ -157,7 +163,8 @@ if submit:
         for i, (fig, rol, retro) in enumerate(figs):
             ax = fig_descripciones.add_subplot(spec[i // 2, i % 2])
             ax.axis('off')
-            ax.text(0.5, 0.9, retro, horizontalalignment='center', verticalalignment='top', color='white', fontsize=12, wrap=True)
+            ax.text(0.5, 0.95, f"{rol}", ha='center', va='top', color='#1DB954', fontsize=15, weight='bold')
+            ax.text(0.5, 0.85, retro, ha='center', va='top', color='white', fontsize=12, wrap=True)
 
         buf_descripciones = io.BytesIO()
         fig_descripciones.tight_layout()
