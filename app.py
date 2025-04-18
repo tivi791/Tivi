@@ -1,13 +1,9 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.backends.backend_agg import RendererAgg
-import os
 from datetime import datetime
 from PIL import Image
 import io
-
-_lock = RendererAgg.lock
 
 st.set_page_config(page_title="Honor of Kings - Análisis de Rendimiento", layout="wide")
 st.title("📊 Honor of Kings - Análisis de Rendimiento por Rol")
