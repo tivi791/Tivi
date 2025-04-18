@@ -3,14 +3,52 @@ import matplotlib.pyplot as plt
 from math import pi
 import io
 import base64
-import pandas as pd
 from datetime import datetime
 
 # Configuración de la página
 st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide")
-st.title("Honor of Kings - Registro Diario de Partidas y Análisis por Línea")
+st.title("Honor of Kings - Registro Diario de Partidas y Análisis Profesional")
 
 roles = ["TOPLANER", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
+
+# Estilo CSS personalizado
+st.markdown("""
+    <style>
+        .main {
+            background-color: #f4f4f9;
+            font-family: 'Arial', sans-serif;
+        }
+        h1 {
+            color: #2a5d84;
+            font-size: 36px;
+            font-weight: bold;
+        }
+        h2, h3 {
+            color: #2a5d84;
+        }
+        .stButton > button {
+            background-color: #007ACC;
+            color: white;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        .stButton > button:hover {
+            background-color: #005F8D;
+        }
+        .card {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px;
+            background-color: white;
+        }
+        .feedback {
+            font-size: 16px;
+            color: #444;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # Verifica si ya existe el estado de sesión para las partidas, si no lo inicializa
 if "registro_partidas" not in st.session_state:
@@ -20,7 +58,7 @@ if "registro_partidas" not in st.session_state:
 def generar_grafico(datos, titulo, categorias, maximos):
     valores = list(datos.values())
 
-    # Usamos el valor máximo de cada etiqueta para ajustar la escala
+    # Normalizar los valores de los gráficos
     valores_normalizados = [v / maximos[categoria] * 100 if maximos[categoria] != 0 else 0 for v, categoria in zip(valores, categorias)]
 
     N = len(categorias)
@@ -123,8 +161,8 @@ if partidas_hoy:
     promedios_totales = {k: v / (total_partidas * len(roles)) for k, v in promedios_totales.items()}
 
     # Generar informe en HTML
-    html_contenido = f"<h2>Resumen Diario - {fecha_actual}</h2>"
-    html_contenido += f"<p>Total de partidas hoy: {len(partidas_hoy)}</p>"
+    html_contenido = f"<h2 style='color:#2a5d84;'>Resumen Diario - {fecha_actual}</h2>"
+    html_contenido += f"<p><b>Total de partidas hoy:</b> {len(partidas_hoy)}</p>"
 
     # Resumen general de todas las partidas
     for rol in roles:
@@ -138,6 +176,7 @@ if partidas_hoy:
         grafico_base64 = base64.b64encode(grafico_buf.read()).decode('utf-8')
 
         # Agregar la información y el gráfico
+        html_contenido += f"<div class='card'>"
         html_contenido += f"<h3>{rol}</h3>"
         html_contenido += f"<p><b>Datos:</b></p>"
         html_contenido += f"<ul>"
@@ -145,31 +184,11 @@ if partidas_hoy:
             html_contenido += f"<li><b>{k}:</b> {v:.2f}</li>"
         html_contenido += f"</ul>"
         html_contenido += f"<img src='data:image/png;base64,{grafico_base64}' width='500'/>"
-        html_contenido += f"<p><b>Análisis:</b> {generar_feedback(maximos_individuales)}</p>"
-
-        # Resumen general de la partida
-        resumen_general.append(f"En {rol}, el rendimiento promedio fue:")
-        resumen_general.append(f"• Daño Infligido: {promedio['Daño Infligido']:.2f}")
-        resumen_general.append(f"• Daño Recibido: {promedio['Daño Recibido']:.2f}")
-        resumen_general.append(f"• Oro Total: {promedio['Oro Total']:.2f}")
-        resumen_general.append(f"• Participación: {promedio['Participación']:.2f}")
-
-    # Agregar análisis comparativo
-    html_contenido += "<h3>Análisis Comparativo de Jugadores:</h3>"
-    html_contenido += "<ul>"
-    for rol in roles:
-        html_contenido += f"<li><b>{rol}:</b> "
-        promedio_individual = [acumulado[rol][k] / total_partidas for k in acumulado[rol]]
-        for i, (k, promedio_valor) in enumerate(zip(acumulado[rol].keys(), promedio_individual)):
-            if promedio_valor > promedios_totales[k]:
-                html_contenido += f"{k}: <span style='color: green;'>Por encima del promedio</span>, "
-            else:
-                html_contenido += f"{k}: <span style='color: red;'>Por debajo del promedio</span>, "
-        html_contenido += "</li>"
-    html_contenido += "</ul>"
+        html_contenido += f"<p class='feedback'><b>Análisis:</b> {generar_feedback(maximos_individuales)}</p>"
+        html_contenido += f"</div>"
 
     # Mostrar resumen general al final
-    html_contenido += "<h3>Resumen General de todas las partidas jugadas:</h3>"
+    html_contenido += "<h3 style='color:#2a5d84;'>Resumen General de todas las partidas jugadas:</h3>"
     html_contenido += "<ul>"
     for item in resumen_general:
         html_contenido += f"<li>{item}</li>"
