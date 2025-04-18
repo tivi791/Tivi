@@ -49,7 +49,7 @@ def generar_grafico(datos, titulo, maximos):
     return valores_normalizados
 
 # Función para generar retroalimentación profesional
-def generar_feedback(jugador, valores_norm):
+def generar_feedback(rol, valores_norm):
     feedback = []
     dmg = valores_norm[0]
     rec = valores_norm[1]
@@ -78,23 +78,24 @@ def generar_feedback(jugador, valores_norm):
 
     return "\n".join(feedback)
 
-# Inputs por jugador
+# Inputs por rol de equipo
+roles = ["TOPLANER", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
 jugadores = []
 participaciones = []
 
 with st.form("form_jugadores"):
-    for i in range(5):
-        st.subheader(f"Jugador {i+1}")
+    for i, rol in enumerate(roles):
+        st.subheader(f"{rol}")
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
-            dmg_inf = st.number_input(f"Daño Infligido Jugador {i+1} (mil)", min_value=0, value=0, key=f"dmg_inf_{i}")
+            dmg_inf = st.number_input(f"Daño Infligido {rol} (mil)", min_value=0, value=0, key=f"dmg_inf_{i}")
         with col2:
-            dmg_rec = st.number_input(f"Daño Recibido Jugador {i+1} (mil)", min_value=0, value=0, key=f"dmg_rec_{i}")
+            dmg_rec = st.number_input(f"Daño Recibido {rol} (mil)", min_value=0, value=0, key=f"dmg_rec_{i}")
         with col3:
-            oro = st.number_input(f"Oro Total Jugador {i+1} (mil)", min_value=0, value=0, key=f"oro_{i}")
+            oro = st.number_input(f"Oro Total {rol} (mil)", min_value=0, value=0, key=f"oro_{i}")
         with col4:
-            participacion = st.slider(f"Participación Jugador {i+1} (%)", min_value=0, max_value=100, value=0, key=f"part_{i}")
+            participacion = st.slider(f"Participación {rol} (%)", min_value=0, max_value=100, value=0, key=f"part_{i}")
 
         jugadores.append({
             "Daño Infligido": dmg_inf,
@@ -111,7 +112,6 @@ if submit:
     if total_participacion != 100:
         st.error("La suma de las participaciones debe ser 100% para poder graficar correctamente.")
     else:
-        # Añadir participación a los datos y calcular máximos
         for i in range(5):
             jugadores[i]["Participación"] = participaciones[i]
 
@@ -120,10 +120,10 @@ if submit:
             max_val = max(j[k] for j in jugadores)
             maximos_globales.append(max_val)
 
-        st.subheader("Gráficos de Desempeño Individual")
+        st.subheader("Gráficos de Desempeño por Rol del Equipo")
         cols = st.columns(5)
         for i, jugador in enumerate(jugadores):
             with cols[i]:
-                valores_normalizados = generar_grafico(jugador, f"Jugador {i+1}", maximos_globales)
-                retro = generar_feedback(jugador, valores_normalizados)
-                st.markdown(f"<div class='feedback'><b>Retroalimentación Jugador {i+1}:</b><br>{retro}</div>", unsafe_allow_html=True)
+                valores_normalizados = generar_grafico(jugador, roles[i], maximos_globales)
+                retro = generar_feedback(roles[i], valores_normalizados)
+                st.markdown(f"<div class='feedback'><b>Retroalimentación {roles[i]}:</b><br>{retro}</div>", unsafe_allow_html=True)
