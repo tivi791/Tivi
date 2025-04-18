@@ -5,6 +5,7 @@ import io
 from datetime import datetime
 import matplotlib.gridspec as gridspec
 import pandas as pd
+from fpdf import FPDF  # Importamos FPDF para generar el PDF
 
 # Configuración de la página
 st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide")
@@ -105,6 +106,7 @@ if partidas_hoy:
         st.pyplot(fig)
         st.markdown(f"**Análisis:** {generar_feedback(valores_norm)}")
 
+    # Crear un DataFrame para descargar el CSV
     df = []
     for partida in partidas_hoy:
         fila = {"Fecha": partida['fecha']}
@@ -115,3 +117,35 @@ if partidas_hoy:
 
     df_final = pd.DataFrame(df)
     st.download_button("Descargar Resumen Diario (.csv)", data=df_final.to_csv(index=False), file_name="resumen_dia.csv", mime="text/csv")
+
+# Generar PDF con todas las partidas del día
+if st.button("Generar Informe en PDF"):
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(0, 10, f"Resumen Diario - {fecha_actual}", ln=True, align="C")
+    
+    for partida in partidas_hoy:
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 14)
+        pdf.cell(0, 10, f"Partida - {partida['fecha']}", ln=True)
+        
+        for i, datos in enumerate(partida["datos"]):
+            pdf.set_font("Arial", '', 12)
+            pdf.cell(0, 10, f"{roles[i]} - Daño Infligido: {datos['Daño Infligido']} | Daño Recibido: {datos['Daño Recibido']} | Oro Total: {datos['Oro Total']} | Participación: {datos['Participación']}%", ln=True)
+
+        pdf.ln(5)
+
+    # Descargar el PDF
+    buffer_pdf = io.BytesIO()
+    pdf.output(buffer_pdf)
+    buffer_pdf.seek(0)
+
+    st.download_button(
+        label="Descargar Informe en PDF",
+        data=buffer_pdf,
+        file_name="Informe_Honor_of_Kings.pdf",
+        mime="application/pdf"
+    )
