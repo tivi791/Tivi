@@ -86,11 +86,15 @@ with st.form("registro_form"):
     submit = st.form_submit_button("Guardar Partida")
 
 if submit:
-    st.session_state.registro_partidas.append({
-        "fecha": datetime.now().strftime("%Y-%m-%d"),
-        "datos": jugadores.copy()
-    })
-    st.success("Partida guardada correctamente.")
+    # Validación para que no se registre una partida vacía
+    if all(d["Daño Infligido"] == 0 and d["Daño Recibido"] == 0 and d["Oro Total"] == 0 and d["Participación"] == 0 for d in jugadores):
+        st.error("Por favor, complete todos los campos con datos válidos.")
+    else:
+        st.session_state.registro_partidas.append({
+            "fecha": datetime.now().strftime("%Y-%m-%d"),
+            "datos": jugadores.copy()
+        })
+        st.success("Partida guardada correctamente.")
 
 # Mostrar partidas guardadas
 st.subheader("Partidas Registradas Hoy")
