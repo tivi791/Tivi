@@ -18,13 +18,19 @@ def normalizar_datos(valores, maximos_globales):
 def generar_grafico(valores, rol):
     categorias = ['Daño Infligido', 'Daño Recibido', 'Oro Total', 'Participación']
     
-    # Agregar el primer valor al final para cerrar el gráfico
+    # Concatenar el primer valor al final para cerrar el gráfico
     valores = np.concatenate((valores, [valores[0]]))
-    categorias += categorias[:1]  # Repetir la primera categoría al final para cerrar el gráfico
     
+    # Repetir la primera categoría al final para cerrar el gráfico
+    categorias = categorias + [categorias[0]]
+    
+    # Calcular los ángulos para cada categoría
     angles = np.linspace(0, 2 * np.pi, len(categorias), endpoint=False).tolist()
-    angles += angles[:1]  # Repetir el primer ángulo al final para cerrar el gráfico
-
+    
+    # Cerrar el gráfico repitiendo el primer ángulo al final
+    angles += angles[:1]
+    
+    # Crear el gráfico radial
     fig, ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(polar=True))
     ax.plot(angles, valores, linewidth=2, linestyle='solid', label=rol, color='gold')
     ax.fill(angles, valores, alpha=0.3, color='gold')
