@@ -1,11 +1,8 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.backends.backend_agg import RendererAgg
 import os
 from datetime import datetime
-
-_lock = RendererAgg.lock
 
 st.set_page_config(page_title="Honor of Kings - Análisis de Rendimiento", layout="wide")
 st.title("📊 Honor of Kings - Análisis de Rendimiento por Rol")
@@ -25,8 +22,8 @@ def generar_grafico(valores, rol):
     angles += angles[:1]
 
     fig, ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(polar=True))
-    ax.plot(angles, valores, linewidth=2, linestyle='solid', label=rol)
-    ax.fill(angles, valores, alpha=0.3)
+    ax.plot(angles, valores, linewidth=2, linestyle='solid', label=rol, color='gold')
+    ax.fill(angles, valores, alpha=0.3, color='gold')
     ax.set_yticklabels([])
     ax.set_xticks(angles[:-1])
     ax.set_xticklabels(categorias, fontsize=10, color='white')
@@ -75,7 +72,7 @@ for idx, rol in enumerate(roles):
         dmg = st.number_input(f"Daño Infligido ({rol})", min_value=0, value=0)
         rec = st.number_input(f"Daño Recibido ({rol})", min_value=0, value=0)
         oro = st.number_input(f"Oro Total ({rol})", min_value=0, value=0)
-        part = st.number_input(f"Participación ({rol}) (%)", min_value=0.0, value=0.0, format="%.1f")
+        part = st.number_input(f"Participación ({rol}) (%)", value=0.0, format="%.1f")
         valores_roles.append([dmg, rec, oro, part])
 
 # Normalización por máximos globales
