@@ -3,77 +3,14 @@ import matplotlib.pyplot as plt
 from math import pi
 import io
 import base64
+import pandas as pd
 from datetime import datetime
 
 # Configuración de la página
 st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide")
-st.title("Honor of Kings - Registro Diario de Partidas y Análisis Profesional")
+st.title("Honor of Kings - Registro Diario de Partidas y Análisis por Línea")
 
 roles = ["TOPLANER", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
-
-# Estilo CSS personalizado
-st.markdown("""
-    <style>
-        .main {
-            background-color: #2E3B4E;
-            font-family: 'Helvetica Neue', sans-serif;
-        }
-        h1 {
-            color: #4C8DFF;
-            font-size: 36px;
-            font-weight: 700;
-            text-align: center;
-        }
-        h2, h3 {
-            color: #B6C5D0;
-            font-size: 24px;
-            font-weight: 600;
-        }
-        .stButton > button {
-            background-color: #4C8DFF;
-            color: white;
-            border-radius: 8px;
-            padding: 10px 20px;
-            font-size: 16px;
-            transition: background-color 0.3s ease;
-        }
-        .stButton > button:hover {
-            background-color: #3A6EC3;
-        }
-        .card {
-            border: 1px solid #4C8DFF;
-            border-radius: 12px;
-            padding: 20px;
-            margin: 15px;
-            background-color: #3D4B63;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        .feedback {
-            font-size: 14px;
-            color: #D1E4FF;
-            margin-top: 10px;
-        }
-        .section-title {
-            color: #4C8DFF;
-            font-size: 22px;
-            font-weight: 600;
-            margin-top: 40px;
-        }
-        .summary-box {
-            border: 1px solid #4C8DFF;
-            border-radius: 12px;
-            background-color: #2E3B4E;
-            padding: 20px;
-            margin-top: 20px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        .summary-text {
-            font-size: 16px;
-            color: #B6C5D0;
-            line-height: 1.6;
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 # Verifica si ya existe el estado de sesión para las partidas, si no lo inicializa
 if "registro_partidas" not in st.session_state:
@@ -83,7 +20,7 @@ if "registro_partidas" not in st.session_state:
 def generar_grafico(datos, titulo, categorias, maximos):
     valores = list(datos.values())
 
-    # Normalizar los valores de los gráficos
+    # Usamos el valor máximo de cada etiqueta para ajustar la escala
     valores_normalizados = [v / maximos[categoria] * 100 if maximos[categoria] != 0 else 0 for v, categoria in zip(valores, categorias)]
 
     N = len(categorias)
@@ -93,13 +30,13 @@ def generar_grafico(datos, titulo, categorias, maximos):
 
     # Crear el gráfico radial
     fig, ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(polar=True))
-    ax.plot(angulos, valores_normalizados, color='#4C8DFF', linewidth=2, label="Desempeño")
-    ax.fill(angulos, valores_normalizados, color='#4C8DFF', alpha=0.3)
+    ax.plot(angulos, valores_normalizados, color='#007ACC', linewidth=2, label="Desempeño")
+    ax.fill(angulos, valores_normalizados, color='#007ACC', alpha=0.3)
     ax.set_xticks(angulos[:-1])
-    ax.set_xticklabels(categorias, fontsize=12, fontweight='bold', color="#D1E4FF")
+    ax.set_xticklabels(categorias, fontsize=12, fontweight='bold')
     ax.set_yticklabels([])  # Eliminamos las etiquetas en el eje Y
-    ax.set_title(titulo, size=16, weight='bold', pad=20, color="#D1E4FF")
-    ax.legend(loc='upper right', fontsize=12)
+    ax.set_title(titulo, size=16, weight='bold', pad=20)
+    ax.legend(loc='upper right')
 
     # Guardamos el gráfico en un buffer para usarlo en HTML
     buf = io.BytesIO()
@@ -186,8 +123,8 @@ if partidas_hoy:
     promedios_totales = {k: v / (total_partidas * len(roles)) for k, v in promedios_totales.items()}
 
     # Generar informe en HTML
-    html_contenido = f"<h2 class='section-title'>Resumen Diario - {fecha_actual}</h2>"
-    html_contenido += f"<p><b>Total de partidas hoy:</b> {len(partidas_hoy)}</p>"
+    html_contenido = f"<h2>Resumen Diario - {fecha_actual}</h2>"
+    html_contenido += f"<p>Total de partidas hoy: {len(partidas_hoy)}</p>"
 
     # Resumen general de todas las partidas
     for rol in roles:
@@ -201,10 +138,49 @@ if partidas_hoy:
         grafico_base64 = base64.b64encode(grafico_buf.read()).decode('utf-8')
 
         # Agregar la información y el gráfico
-        html_contenido += f"<div class='card'>"
         html_contenido += f"<h3>{rol}</h3>"
-        html_contenido += f"<img src='data:image/png;base64,{grafico_base64}' width='100%'/>"
-        html_contenido += f"<p class='summary-text'><b>Resumen:</b> {generar_feedback(maximos_individuales)}</p>"
-        html_contenido += "</div>"
+        html_contenido += f"<p><b>Datos:</b></p>"
+        html_contenido += f"<ul>"
+        for k, v in promedio.items():
+            html_contenido += f"<li><b>{k}:</b> {v:.2f}</li>"
+        html_contenido += f"</ul>"
+        html_contenido += f"<img src='data:image/png;base64,{grafico_base64}' width='500'/>"
+        html_contenido += f"<p><b>Análisis:</b> {generar_feedback(maximos_individuales)}</p>"
+
+        # Resumen general de la partida
+        resumen_general.append(f"En {rol}, el rendimiento promedio fue:")
+        resumen_general.append(f"• Daño Infligido: {promedio['Daño Infligido']:.2f}")
+        resumen_general.append(f"• Daño Recibido: {promedio['Daño Recibido']:.2f}")
+        resumen_general.append(f"• Oro Total: {promedio['Oro Total']:.2f}")
+        resumen_general.append(f"• Participación: {promedio['Participación']:.2f}")
+
+    # Agregar análisis comparativo
+    html_contenido += "<h3>Análisis Comparativo de Jugadores:</h3>"
+    html_contenido += "<ul>"
+    for rol in roles:
+        html_contenido += f"<li><b>{rol}:</b> "
+        promedio_individual = [acumulado[rol][k] / total_partidas for k in acumulado[rol]]
+        for i, (k, promedio_valor) in enumerate(zip(acumulado[rol].keys(), promedio_individual)):
+            if promedio_valor > promedios_totales[k]:
+                html_contenido += f"{k}: <span style='color: green;'>Por encima del promedio</span>, "
+            else:
+                html_contenido += f"{k}: <span style='color: red;'>Por debajo del promedio</span>, "
+        html_contenido += "</li>"
+    html_contenido += "</ul>"
+
+    # Mostrar resumen general al final
+    html_contenido += "<h3>Resumen General de todas las partidas jugadas:</h3>"
+    html_contenido += "<ul>"
+    for item in resumen_general:
+        html_contenido += f"<li>{item}</li>"
+    html_contenido += "</ul>"
 
     st.markdown(html_contenido, unsafe_allow_html=True)
+
+    # Opción para descargar el informe en formato HTML
+    st.download_button(
+        label="Descargar Informe en HTML",
+        data=html_contenido,
+        file_name="informe_honor_of_kings.html",
+        mime="text/html"
+    )
