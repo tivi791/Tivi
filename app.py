@@ -36,10 +36,6 @@ roles = ["🌟 TOPLANER", "🐉 JUNGLER", "🧠 MIDLANER", "🏹 ADCARRY", "🛡
 def generar_grafico(datos, titulo, maximos):
     categorias = list(datos.keys())
     valores = list(datos.values())
-
-    # Aseguramos que maximos tenga la misma longitud que los valores
-    maximos = maximos[:len(valores)]  # Ajustamos el tamaño de maximos
-
     valores_normalizados = [v / maximos[i] * 100 if maximos[i] != 0 else 0 for i, v in enumerate(valores)]
 
     N = len(categorias)
@@ -86,12 +82,9 @@ def generar_feedback(valores_norm, rol):
 
     return "\n".join(feedback)
 
-# Configurar el número de partidas
-numero_partidas = st.number_input("¿Cuántas partidas quieres registrar?", min_value=1, max_value=20, value=7)
-
 # Registrar los datos de las partidas
 partidas = []
-for partida_num in range(1, numero_partidas + 1):  # Ajustable según número de partidas
+for partida_num in range(1, 8):  # 7 partidas
     partida_resultados = []
     st.subheader(f"Registro de Partida {partida_num}")
     for rol in roles:
@@ -105,7 +98,7 @@ for partida_num in range(1, numero_partidas + 1):  # Ajustable según número de
         with col3:
             oro = st.number_input(f"Oro Total {rol} (mil)", min_value=0, value=0, key=f"oro_{partida_num}_{rol}")
         with col4:
-            participacion = st.number_input(f"Participación {rol} (%)", min_value=0, max_value=100, value=0, key=f"part_{partida_num}_{rol}")
+            participacion = st.slider(f"Participación {rol} (%)", min_value=0, max_value=100, value=0, key=f"part_{partida_num}_{rol}")
         
         partida_resultados.append({
             "Rol": rol,
@@ -130,7 +123,7 @@ if submit:
             st.pyplot(fig)
 
     # Generar el resumen global
-    st.subheader("Resumen Final de las Partidas")
+    st.subheader("Resumen Final de las 7 Partidas")
     resumen_global = {}
 
     for partida_num, partida_resultados in enumerate(partidas):
