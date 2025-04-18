@@ -54,30 +54,37 @@ def generar_grafico(datos, titulo, maximos):
     return fig, valores_normalizados
 
 # Función para generar retroalimentación profesional
-def generar_feedback(valores_norm):
+def generar_feedback(valores_norm, rol):
     feedback = []
     dmg, rec, oro, part = valores_norm[:4]  # Aseguramos que solo haya 4 valores
 
+    # Retroalimentación según Daño Infligido
     if dmg > 80:
         feedback.append("Daño infligido sobresaliente, demuestra gran presión en combate.")
     elif dmg < 40:
         feedback.append("Daño infligido bajo, considera mejorar tu posicionamiento y toma de peleas.")
 
+    # Retroalimentación según Daño Recibido
     if rec < 40:
         feedback.append("Buena gestión de daño recibido, uso efectivo del posicionamiento.")
     elif rec > 80:
         feedback.append("Demasiado daño recibido, considera mejorar la toma de decisiones defensivas.")
 
+    # Retroalimentación según Oro Total
     if oro > 70:
         feedback.append("Buena economía, demuestra un farmeo eficiente.")
     elif oro < 30:
         feedback.append("Economía baja, considera enfocarte más en farmeo o control de mapa.")
 
+    # Retroalimentación según Participación
     if part > 70:
         feedback.append("Excelente participación en equipo, clave para el control de partidas.")
     elif part < 30:
         feedback.append("Baja participación, es importante estar más presente en objetivos y peleas.")
 
+    # Descripción general de cada rol
+    feedback.append(f"<b>Descripción {rol}:</b> Este rol es crucial para el control de los objetivos y el rendimiento global del equipo. Es importante que mantengas una buena comunicación y un control adecuado del mapa para maximizar el impacto durante la partida.")
+    
     return "\n".join(feedback)
 
 # Inputs por jugador
@@ -127,7 +134,7 @@ if submit:
 
         for i, jugador in enumerate(jugadores):
             fig, valores_normalizados = generar_grafico(jugador, roles[i], maximos_globales)
-            feedback = generar_feedback(valores_normalizados)
+            feedback = generar_feedback(valores_normalizados, roles[i])
             st.pyplot(fig)
             st.markdown(f"<div class='feedback'><b>Retroalimentación {roles[i]}:</b><br>{feedback}</div>", unsafe_allow_html=True)
             figs.append((fig, roles[i], feedback))
