@@ -2,9 +2,9 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from math import pi
 import io
+from datetime import datetime
 import base64
 import pandas as pd
-from datetime import datetime
 
 # Configuración de la página
 st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide")
@@ -18,31 +18,24 @@ if "registro_partidas" not in st.session_state:
 
 # Funciones de procesamiento de gráficos y retroalimentación
 def generar_grafico(datos, titulo, categorias, maximos):
+    categorias = list(datos.keys())
     valores = list(datos.values())
-
-    # Usamos el valor máximo de cada etiqueta para ajustar la escala
-    valores_normalizados = [v / maximos[categoria] * 100 if maximos[categoria] != 0 else 0 for v, categoria in zip(valores, categorias)]
-
+    valores_normalizados = [v / maximos[i] * 100 if maximos[i] != 0 else 0 for i, v in enumerate(valores)]
+    
     N = len(categorias)
     angulos = [n / float(N) * 2 * pi for n in range(N)]
     valores_normalizados += valores_normalizados[:1]
     angulos += angulos[:1]
-
-    # Crear el gráfico radial
-    fig, ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(polar=True))
-    ax.plot(angulos, valores_normalizados, color='#007ACC', linewidth=2, label="Desempeño")
-    ax.fill(angulos, valores_normalizados, color='#007ACC', alpha=0.3)
+    
+    fig, ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(polar=True))
+    ax.plot(angulos, valores_normalizados, color='#1DB954', linewidth=2)
+    ax.fill(angulos, valores_normalizados, color='#1DB954', alpha=0.3)
     ax.set_xticks(angulos[:-1])
-    ax.set_xticklabels(categorias, fontsize=12, fontweight='bold')
-    ax.set_yticklabels([])  # Eliminamos las etiquetas en el eje Y
-    ax.set_title(titulo, size=16, weight='bold', pad=20)
-    ax.legend(loc='upper right')
-
-    # Guardamos el gráfico en un buffer para usarlo en HTML
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', bbox_inches='tight')
-    buf.seek(0)
-    return buf
+    ax.set_xticklabels(categorias, fontsize=12)
+    ax.set_yticklabels([])
+    ax.set_title(titulo, size=14, weight='bold', pad=20)
+    
+    return fig
 
 def generar_feedback(valores_norm):
     dmg, rec, oro, part = valores_norm[:4]
@@ -91,96 +84,57 @@ if submit:
         st.error("Por favor, complete todos los campos con datos válidos.")
     else:
         st.session_state.registro_partidas.append({
-            "fecha": datetime.now().strftime("%Y-%m-%d"),
+            "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "datos": jugadores.copy()
         })
         st.success("Partida guardada correctamente.")
 
-# Mostrar partidas guardadas
-st.subheader("Partidas Registradas Hoy")
-fecha_actual = datetime.now().strftime("%Y-%m-%d")
-partidas_hoy = [p for p in st.session_state.registro_partidas if p["fecha"] == fecha_actual]
-st.write(f"Total de partidas hoy: {len(partidas_hoy)}")
+# Mostrar historial de partidas guardadas
+st.subheader("Historial de Partidas Registradas")
 
-if partidas_hoy:
+if st.session_state.registro_partidas:
+    for i, partida in enumerate(st.session_state.registro_partidas):
+        fecha_partida = partida["fecha"]
+        resumen_partida = [f"<b>{rol}:</b> Daño: {datos['Daño Infligido']}, Recibido: {datos['Daño Recibido']}, Oro: {datos['Oro Total']}, Participación: {datos['Participación']}%" for rol, datos in zip(roles, partida["datos"])]
+        
+        # Mostrar cada partida guardada
+        st.markdown(f"<details><summary><b>Partida {i + 1} - {fecha_partida}</b></summary>")
+        st.markdown("<ul>" + "".join([f"<li>{res}</li>" for res in resumen_partida]) + "</ul>")
+        st.markdown("</details>")
+
+# Mostrar análisis general al final del día
+if len(st.session_state.registro_partidas) > 0:
+    st.subheader("Análisis General del Día")
+    
+    # Acumular los datos para obtener el promedio por rol
     acumulado = {rol: {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0} for rol in roles}
-    resumen_general = []
-    maximos = {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0}
-    promedios_totales = {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0}
-
-    for partida in partidas_hoy:
+    for partida in st.session_state.registro_partidas:
         for i, datos in enumerate(partida["datos"]):
             for k in datos:
                 acumulado[roles[i]][k] += datos[k]
-                if datos[k] > maximos[k]:
-                    maximos[k] = datos[k]
 
-    # Calcular los promedios
-    total_partidas = len(partidas_hoy)
+    promedio = {}
     for rol in roles:
-        for k in acumulado[rol]:
-            promedios_totales[k] += acumulado[rol][k]
-    promedios_totales = {k: v / (total_partidas * len(roles)) for k, v in promedios_totales.items()}
+        promedio[rol] = {k: v / len(st.session_state.registro_partidas) for k, v in acumulado[rol].items()}
 
-    # Generar informe en HTML
-    html_contenido = f"<h2>Resumen Diario - {fecha_actual}</h2>"
-    html_contenido += f"<p>Total de partidas hoy: {len(partidas_hoy)}</p>"
-
-    # Resumen general de todas las partidas
+    # Generar gráficos y feedback para cada rol
     for rol in roles:
-        datos = acumulado[rol]
-        promedio = {k: v / total_partidas for k, v in datos.items()}
-        maximos_individuales = list(promedio.values())
+        st.markdown(f"### {rol}")
+        datos_promedio = promedio[rol]
+        maximos = list(datos_promedio.values())
+        fig = generar_grafico(datos_promedio, f"Promedio del Día - {rol}", roles, maximos)
+        st.pyplot(fig)
+        st.markdown(f"**Análisis:** {generar_feedback(list(datos_promedio.values()))}")
 
-        # Agregar el gráfico
-        categorias = list(promedio.keys())
-        grafico_buf = generar_grafico(promedio, f"Promedio del día - {rol}", categorias, maximos)
-        grafico_base64 = base64.b64encode(grafico_buf.read()).decode('utf-8')
+# Funcionalidad para descargar el resumen diario como archivo CSV
+if st.session_state.registro_partidas:
+    df = []
+    for partida in st.session_state.registro_partidas:
+        fila = {"Fecha": partida['fecha']}
+        for i, datos in enumerate(partida['datos']):
+            for k, v in datos.items():
+                fila[f"{roles[i]} - {k}"] = v
+        df.append(fila)
 
-        # Agregar la información y el gráfico
-        html_contenido += f"<h3>{rol}</h3>"
-        html_contenido += f"<p><b>Datos:</b></p>"
-        html_contenido += f"<ul>"
-        for k, v in promedio.items():
-            html_contenido += f"<li><b>{k}:</b> {v:.2f}</li>"
-        html_contenido += f"</ul>"
-        html_contenido += f"<img src='data:image/png;base64,{grafico_base64}' width='500'/>"
-        html_contenido += f"<p><b>Análisis:</b> {generar_feedback(maximos_individuales)}</p>"
-
-        # Resumen general de la partida
-        resumen_general.append(f"En {rol}, el rendimiento promedio fue:")
-        resumen_general.append(f"• Daño Infligido: {promedio['Daño Infligido']:.2f}")
-        resumen_general.append(f"• Daño Recibido: {promedio['Daño Recibido']:.2f}")
-        resumen_general.append(f"• Oro Total: {promedio['Oro Total']:.2f}")
-        resumen_general.append(f"• Participación: {promedio['Participación']:.2f}")
-
-    # Agregar análisis comparativo
-    html_contenido += "<h3>Análisis Comparativo de Jugadores:</h3>"
-    html_contenido += "<ul>"
-    for rol in roles:
-        html_contenido += f"<li><b>{rol}:</b> "
-        promedio_individual = [acumulado[rol][k] / total_partidas for k in acumulado[rol]]
-        for i, (k, promedio_valor) in enumerate(zip(acumulado[rol].keys(), promedio_individual)):
-            if promedio_valor > promedios_totales[k]:
-                html_contenido += f"{k}: <span style='color: green;'>Por encima del promedio</span>, "
-            else:
-                html_contenido += f"{k}: <span style='color: red;'>Por debajo del promedio</span>, "
-        html_contenido += "</li>"
-    html_contenido += "</ul>"
-
-    # Mostrar resumen general al final
-    html_contenido += "<h3>Resumen General de todas las partidas jugadas:</h3>"
-    html_contenido += "<ul>"
-    for item in resumen_general:
-        html_contenido += f"<li>{item}</li>"
-    html_contenido += "</ul>"
-
-    st.markdown(html_contenido, unsafe_allow_html=True)
-
-    # Opción para descargar el informe en formato HTML
-    st.download_button(
-        label="Descargar Informe en HTML",
-        data=html_contenido,
-        file_name="informe_honor_of_kings.html",
-        mime="text/html"
-    )
+    df_final = pd.DataFrame(df)
+    st.download_button("Descargar Resumen Diario (.csv)", data=df_final.to_csv(index=False), file_name="resumen_dia.csv", mime="text/csv")
