@@ -1,123 +1,170 @@
 import streamlit as st
 import matplotlib.pyplot as plt
-import numpy as np
-from datetime import datetime
-from PIL import Image
+from math import pi
 import io
+from datetime import datetime
+import matplotlib.gridspec as gridspec
 
-st.set_page_config(page_title="Honor of Kings - Análisis de Rendimiento", layout="wide")
-st.title("📊 Honor of Kings - Análisis de Rendimiento por Rol")
+# Configuración de la página
+st.set_page_config(page_title="Honor of Kings - Gráficos de Rendimiento", layout="wide")
+st.title("Honor of Kings - Generador de Gráficos Radiales para eSports")
+st.markdown("""
+<style>
+    .stApp {
+        background-color: #0e1117;
+        color: #FFFFFF;
+    }
+    h1, h2, h3, h4 {
+        color: #1DB954;
+    }
+    .feedback {
+        background-color: #1c1c1c;
+        padding: 1em;
+        border-radius: 10px;
+        margin-top: 1em;
+        color: white;
+        font-size: 0.9em;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-roles = ["TOPLINE", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
+roles = ["TOPLANER", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
 
-# Función para normalizar datos respecto a máximos globales
-def normalizar_datos(valores, maximos_globales):
-    return [v / m * 100 if m != 0 else 0 for v, m in zip(valores, maximos_globales)]
+# Función para generar gráfico radial con diseño profesional
+def generar_grafico(datos, titulo, maximos):
+    categorias = list(datos.keys())
+    valores = list(datos.values())
+    valores_normalizados = [v / maximos[i] * 100 if maximos[i] != 0 else 0 for i, v in enumerate(valores)]
 
-# Función para generar gráfico radial
-def generar_grafico(valores, rol):
-    categorias = ['Daño Infligido', 'Daño Recibido', 'Oro Total', 'Participación']
-    
-    # Aseguramos que 'valores' tiene 4 elementos (uno por categoría), y luego agregamos el primero para cerrar el gráfico
-    valores = np.array(valores + [valores[0]])  # Concatenamos el primer valor al final
-    categorias += [categorias[0]]  # Repetimos la primera categoría al final
-    
-    # Calcular los ángulos para cada categoría
-    angles = np.linspace(0, 2 * np.pi, len(categorias), endpoint=False).tolist()
-    angles += angles[:1]  # Repetimos el primer ángulo para cerrar el gráfico
-    
-    # Crear el gráfico radial
+    N = len(categorias)
+    angulos = [n / float(N) * 2 * pi for n in range(N)]
+    valores_normalizados += valores_normalizados[:1]
+    angulos += angulos[:1]
+
     fig, ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(polar=True))
-    ax.plot(angles, valores, linewidth=2, linestyle='solid', label=rol, color='gold')
-    ax.fill(angles, valores, alpha=0.3, color='gold')
-    ax.set_yticklabels([])
-    ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(categorias, fontsize=10, color='white')
-    ax.set_title(f"{rol}", fontsize=14, color='gold')
-    ax.grid(True, linestyle='--', alpha=0.5)
+    ax.set_facecolor('#1c1c1c')
     fig.patch.set_facecolor('#0e1117')
-    ax.set_facecolor('#0e1117')
-    return fig
+
+    ax.plot(angulos, valores_normalizados, color='#1DB954', linewidth=2)
+    ax.fill(angulos, valores_normalizados, color='#1DB954', alpha=0.3)
+    ax.set_xticks(angulos[:-1])
+    ax.set_xticklabels(categorias, color='white')
+    ax.set_yticklabels([])
+    ax.set_title(titulo, color='white', size=14)
+    return fig, valores_normalizados
 
 # Función para generar retroalimentación profesional
-def generar_feedback(valores_norm):
-    dmg, rec, oro, part = valores_norm
+def generar_feedback(valores_norm, rol):
     feedback = []
+    dmg, rec, oro, part = valores_norm[:4]  # Aseguramos que solo haya 4 valores
+
+    # Retroalimentación según Daño Infligido
     if dmg > 80:
-        feedback.append("Alto impacto ofensivo, gran presión en el mapa.")
-    elif dmg < 30:
-        feedback.append("Bajo daño infligido, considerar rotaciones y mejor selección de enfrentamientos.")
+        feedback.append("Daño infligido sobresaliente, demuestra gran presión en combate.")
+    elif dmg < 40:
+        feedback.append("Daño infligido bajo, considera mejorar tu posicionamiento y toma de peleas.")
 
-    if rec > 80:
-        feedback.append("Recibió mucho daño, posible mal posicionamiento o mal focus enemigo.")
-    elif rec < 30:
-        feedback.append("Buena evasión o posicionamiento estratégico.")
+    # Retroalimentación según Daño Recibido
+    if rec < 40:
+        feedback.append("Buena gestión de daño recibido, uso efectivo del posicionamiento.")
+    elif rec > 80:
+        feedback.append("Demasiado daño recibido, considera mejorar la toma de decisiones defensivas.")
 
-    if oro > 80:
-        feedback.append("Gran eficiencia en farmeo y objetivos.")
+    # Retroalimentación según Oro Total
+    if oro > 70:
+        feedback.append("Buena economía, demuestra un farmeo eficiente.")
     elif oro < 30:
-        feedback.append("Bajo ingreso de oro, podría mejorar la eficiencia en la toma de recursos.")
+        feedback.append("Economía baja, considera enfocarte más en farmeo o control de mapa.")
 
+    # Retroalimentación según Participación
     if part > 70:
-        feedback.append("Alta participación en peleas, excelente coordinación.")
+        feedback.append("Excelente participación en equipo, clave para el control de partidas.")
     elif part < 30:
-        feedback.append("Baja participación, mejorar presencia en peleas clave.")
+        feedback.append("Baja participación, es importante estar más presente en objetivos y peleas.")
 
+    # Descripción general de cada rol
+    feedback.append(f"<b>Descripción {rol}:</b> Este rol es crucial para el control de los objetivos y el rendimiento global del equipo. Es importante que mantengas una buena comunicación y un control adecuado del mapa para maximizar el impacto durante la partida.")
+    
     return "\n".join(feedback)
 
-# Entrada de datos
-st.markdown("## Ingreso de Datos por Rol")
+# Inputs por jugador
+jugadores = []
+participaciones = []
 
-valores_roles = []
-inputs = []
+with st.form("form_jugadores"):
+    for i, rol in enumerate(roles):
+        st.subheader(f"{rol}")
+        col1, col2, col3, col4 = st.columns(4)
 
-cols = st.columns(5)
-for idx, rol in enumerate(roles):
-    with cols[idx]:
-        st.subheader(rol)
-        dmg = st.number_input(f"Daño Infligido ({rol})", min_value=0, value=0)
-        rec = st.number_input(f"Daño Recibido ({rol})", min_value=0, value=0)
-        oro = st.number_input(f"Oro Total ({rol})", min_value=0, value=0)
-        part = st.number_input(f"Participación ({rol}) (%)", min_value=0.0, value=0.0, format="%.1f")
-        valores_roles.append([dmg, rec, oro, part])
+        with col1:
+            dmg_inf = st.number_input(f"Daño Infligido {rol} (mil)", min_value=0, value=0, key=f"dmg_inf_{i}")
+        with col2:
+            dmg_rec = st.number_input(f"Daño Recibido {rol} (mil)", min_value=0, value=0, key=f"dmg_rec_{i}")
+        with col3:
+            oro = st.number_input(f"Oro Total {rol} (mil)", min_value=0, value=0, key=f"oro_{i}")
+        with col4:
+            participacion = st.slider(f"Participación {rol} (%)", min_value=0, max_value=100, value=0, key=f"part_{i}")
 
-# Normalización por máximos globales
-valores_array = np.array(valores_roles)
-maximos_globales = valores_array.max(axis=0)
-valores_normalizados = [normalizar_datos(valores, maximos_globales) for valores in valores_roles]
+        jugadores.append({
+            "Daño Infligido": dmg_inf,
+            "Daño Recibido": dmg_rec,
+            "Oro Total": oro,
+        })
+        participaciones.append(participacion)
 
-# Mostrar gráficos y retroalimentación
-st.markdown("## 📈 Gráficos y Retroalimentación por Rol")
+    submit = st.form_submit_button("Generar Gráficos")
 
-figs = []
-col_graficos = st.columns(5)
+if submit:
+    total_participacion = sum(participaciones)
 
-for idx, rol in enumerate(roles):
-    with col_graficos[idx]:
-        fig = generar_grafico(valores_normalizados[idx], rol)
-        st.pyplot(fig)
-        st.markdown(f"**Análisis Profesional - {rol}:**")
-        st.markdown(generar_feedback(valores_normalizados[idx]))
-        figs.append(fig)
+    if total_participacion != 100:
+        st.error("La suma de las participaciones debe ser 100% para poder graficar correctamente.")
+    else:
+        for i in range(5):
+            jugadores[i]["Participación"] = participaciones[i]
 
-# Opción para guardar gráficos
-if st.button("📥 Descargar Gráficos como Imagen"):
-    ancho_total = 2500
-    alto_total = 500
-    imagen_final = Image.new('RGB', (ancho_total, alto_total), color=(14, 17, 23))
+        maximos_globales = []
+        for k in jugadores[0].keys():
+            max_val = max(j[k] for j in jugadores)
+            maximos_globales.append(max_val)
 
-    for i, fig in enumerate(figs):
+        st.subheader("Gráficos de Desempeño Individual")
+        figs = []
+        feedbacks = []
+
+        for i, jugador in enumerate(jugadores):
+            fig, valores_normalizados = generar_grafico(jugador, roles[i], maximos_globales)
+            feedback = generar_feedback(valores_normalizados, roles[i])
+            st.pyplot(fig)
+            st.markdown(f"<div class='feedback'><b>Retroalimentación {roles[i]}:</b><br>{feedback}</div>", unsafe_allow_html=True)
+            figs.append((fig, roles[i], feedback))
+
+        # Crear figura compuesta para descarga
+        fig_final = plt.figure(figsize=(15, 10), facecolor='#0e1117')
+        spec = gridspec.GridSpec(2, 3, figure=fig_final)
+
+        for i, (fig, rol, retro) in enumerate(figs):
+            ax = fig_final.add_subplot(spec[i // 3, i % 3], polar=True)
+            fig_axes = fig.get_axes()[0]
+            for line in fig_axes.get_lines():
+                ax.plot(line.get_xdata(), line.get_ydata(), color=line.get_color(), linewidth=2)
+            for patch in fig_axes.collections:
+                ax.fill(patch.get_paths()[0].vertices[:, 0], patch.get_paths()[0].vertices[:, 1], color=patch.get_facecolor()[0], alpha=0.3)
+            ax.set_xticks(fig_axes.get_xticks())
+            ax.set_xticklabels(fig_axes.get_xticklabels(), color='white')
+            ax.set_yticklabels([])
+            ax.set_title(rol, color='white')
+
+            # Agregar la descripción y retroalimentación en la figura final
+            ax.text(0.5, -0.2, retro, horizontalalignment='center', verticalalignment='center', color='white', fontsize=10, transform=ax.transAxes)
+
+        # Guardar imagen como PNG
         buf = io.BytesIO()
-        fig.savefig(buf, format='png', dpi=200, bbox_inches='tight')
-        buf.seek(0)
-        imagen = Image.open(buf)
-        imagen_final.paste(imagen, (i * 500, 0))
-
-    output_buf = io.BytesIO()
-    imagen_final.save(output_buf, format='PNG')
-    st.download_button(
-        label="📸 Descargar Imagen de Gráficos",
-        data=output_buf.getvalue(),
-        file_name=f"graficos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
-        mime="image/png"
-    )
+        fig_final.tight_layout()
+        fig_final.savefig(buf, format="png", dpi=300, bbox_inches='tight')
+        st.download_button(
+            label="📥 Descargar imagen con todos los gráficos y descripciones",
+            data=buf.getvalue(),
+            file_name="Graficos_Honor_of_Kings.png",
+            mime="image/png"
+        )
