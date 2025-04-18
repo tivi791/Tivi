@@ -17,14 +17,12 @@ if "registro_partidas" not in st.session_state:
     st.session_state.registro_partidas = []
 
 # Funciones de procesamiento de gráficos y retroalimentación
-def generar_grafico(datos, titulo, categorias):
+def generar_grafico(datos, titulo, categorias, maximos):
     valores = list(datos.values())
 
-    # Normalizamos los valores
-    maximo = max(valores)
-    valores_normalizados = [v / maximo * 100 if maximo != 0 else 0 for v in valores]
+    # Usamos el valor máximo de cada etiqueta para ajustar la escala
+    valores_normalizados = [v / maximos[categoria] * 100 if maximos[categoria] != 0 else 0 for v, categoria in zip(valores, categorias)]
 
-    # Aseguramos que todos los valores se normalicen y reflejen adecuadamente en la gráfica
     N = len(categorias)
     angulos = [n / float(N) * 2 * pi for n in range(N)]
     valores_normalizados += valores_normalizados[:1]
@@ -103,11 +101,14 @@ st.write(f"Total de partidas hoy: {len(partidas_hoy)}")
 if partidas_hoy:
     acumulado = {rol: {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0} for rol in roles}
     resumen_general = []
+    maximos = {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0}
 
     for partida in partidas_hoy:
         for i, datos in enumerate(partida["datos"]):
             for k in datos:
                 acumulado[roles[i]][k] += datos[k]
+                if datos[k] > maximos[k]:
+                    maximos[k] = datos[k]
 
     # Generar informe en HTML
     html_contenido = f"<h2>Resumen Diario - {fecha_actual}</h2>"
@@ -118,11 +119,11 @@ if partidas_hoy:
         datos = acumulado[rol]
         partidas_totales = len(partidas_hoy)
         promedio = {k: v / partidas_totales for k, v in datos.items()}
-        maximos = list(promedio.values())
+        maximos_individuales = list(promedio.values())
 
         # Agregar el gráfico
         categorias = list(promedio.keys())
-        grafico_buf = generar_grafico(promedio, f"Promedio del día - {rol}", categorias)
+        grafico_buf = generar_grafico(promedio, f"Promedio del día - {rol}", categorias, maximos)
         grafico_base64 = base64.b64encode(grafico_buf.read()).decode('utf-8')
 
         # Agregar la información y el gráfico
@@ -133,7 +134,7 @@ if partidas_hoy:
             html_contenido += f"<li><b>{k}:</b> {v:.2f}</li>"
         html_contenido += f"</ul>"
         html_contenido += f"<img src='data:image/png;base64,{grafico_base64}' width='500'/>"
-        html_contenido += f"<p><b>Análisis:</b> {generar_feedback(maximos)}</p>"
+        html_contenido += f"<p><b>Análisis:</b> {generar_feedback(maximos_individuales)}</p>"
 
         # Resumen general de la partida
         resumen_general.append(f"En {rol}, el rendimiento promedio fue:")
