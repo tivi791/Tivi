@@ -33,7 +33,12 @@ def generar_grafico(datos, titulo, maximos):
     ax.set_xticklabels(categorias, fontsize=12)
     ax.set_yticklabels([])
     ax.set_title(titulo, size=14, weight='bold', pad=20)
-    return fig, valores_normalizados
+    
+    # Guardar el gráfico en memoria
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    return buf, valores_normalizados
 
 def generar_feedback(valores_norm):
     dmg, rec, oro, part = valores_norm[:4]
@@ -136,6 +141,13 @@ if st.button("Generar Informe en PDF"):
             pdf.cell(0, 10, f"{roles[i]} - Daño Infligido: {datos['Daño Infligido']} | Daño Recibido: {datos['Daño Recibido']} | Oro Total: {datos['Oro Total']} | Participación: {datos['Participación']}%", ln=True)
 
         pdf.ln(5)
+
+        # Guardar el gráfico en memoria y agregarlo al PDF
+        fig_buf, _ = generar_grafico(partida["datos"], f"Promedio del día - {partida['fecha']}", list(partida["datos"][0].values()))
+        
+        # Convertir el gráfico a imagen y agregarlo al PDF
+        fig_buf.seek(0)
+        pdf.image(fig_buf, x=10, y=pdf.get_y(), w=180)  # Ajusta la posición y el tamaño de la imagen
 
     # Guardar el PDF en memoria
     buffer_pdf = io.BytesIO()
