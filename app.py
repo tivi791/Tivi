@@ -16,7 +16,7 @@ if "registro_partidas" not in st.session_state:
     st.session_state.registro_partidas = []
 
 # Funciones de procesamiento
-def generar_grafico(datos, titulo, maximos):
+def generar_grafico(datos, titulo, maximos, mostrar_en_streamlit=False):
     categorias = list(datos.keys())
     valores = list(datos.values())
     valores_normalizados = [v / maximos[i] * 100 if maximos[i] != 0 else 0 for i, v in enumerate(valores)]
@@ -33,12 +33,16 @@ def generar_grafico(datos, titulo, maximos):
     ax.set_xticklabels(categorias, fontsize=12)
     ax.set_yticklabels([])
     ax.set_title(titulo, size=14, weight='bold', pad=20)
-    
-    # Guardar el gráfico en memoria
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    return buf, valores_normalizados
+
+    # Si queremos mostrar en Streamlit, usamos st.pyplot() directamente
+    if mostrar_en_streamlit:
+        st.pyplot(fig)
+    else:
+        # Guardamos la imagen en memoria
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        return buf, valores_normalizados
 
 def generar_feedback(valores_norm):
     dmg, rec, oro, part = valores_norm[:4]
@@ -106,9 +110,9 @@ if partidas_hoy:
         partidas_totales = len(partidas_hoy)
         promedio = {k: v / partidas_totales for k, v in datos.items()}
         maximos = list(promedio.values())
-        fig, valores_norm = generar_grafico(promedio, f"Promedio del día - {rol}", maximos)
-        st.pyplot(fig)
-        st.markdown(f"**Análisis:** {generar_feedback(valores_norm)}")
+        # Mostrar el gráfico en Streamlit
+        generar_grafico(promedio, f"Promedio del día - {rol}", maximos, mostrar_en_streamlit=True)
+        st.markdown(f"**Análisis:** {generar_feedback(maximos)}")
 
     # Crear un DataFrame para descargar el CSV
     df = []
@@ -143,7 +147,7 @@ if st.button("Generar Informe en PDF"):
         pdf.ln(5)
 
         # Guardar el gráfico en memoria y agregarlo al PDF
-        fig_buf, _ = generar_grafico(partida["datos"], f"Promedio del día - {partida['fecha']}", list(partida["datos"][0].values()))
+        fig_buf, _ = generar_grafico(partida["datos"], f"Promedio del día - {partida['fecha']}", list(partida["datos"][0].values()), mostrar_en_streamlit=False)
         
         # Convertir el gráfico a imagen y agregarlo al PDF
         fig_buf.seek(0)
