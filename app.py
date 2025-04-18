@@ -2,6 +2,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from math import pi
 import io
+from datetime import datetime
 import matplotlib.gridspec as gridspec
 
 # Configuración de la página
@@ -59,30 +60,30 @@ def generar_feedback(valores_norm, rol):
 
     # Retroalimentación según Daño Infligido
     if dmg > 80:
-        feedback.append("Daño infligido alto.")
+        feedback.append("Daño infligido sobresaliente, demuestra gran presión en combate.")
     elif dmg < 40:
-        feedback.append("Daño infligido bajo.")
+        feedback.append("Daño infligido bajo, considera mejorar tu posicionamiento y toma de peleas.")
 
     # Retroalimentación según Daño Recibido
     if rec < 40:
-        feedback.append("Buen control del daño recibido.")
+        feedback.append("Buena gestión de daño recibido, uso efectivo del posicionamiento.")
     elif rec > 80:
-        feedback.append("Demasiado daño recibido.")
+        feedback.append("Demasiado daño recibido, considera mejorar la toma de decisiones defensivas.")
 
     # Retroalimentación según Oro Total
     if oro > 70:
-        feedback.append("Buena economía.")
+        feedback.append("Buena economía, demuestra un farmeo eficiente.")
     elif oro < 30:
-        feedback.append("Economía baja.")
+        feedback.append("Economía baja, considera enfocarte más en farmeo o control de mapa.")
 
     # Retroalimentación según Participación
     if part > 70:
-        feedback.append("Gran participación en equipo.")
+        feedback.append("Excelente participación en equipo, clave para el control de partidas.")
     elif part < 30:
-        feedback.append("Baja participación.")
+        feedback.append("Baja participación, es importante estar más presente en objetivos y peleas.")
 
     # Descripción general de cada rol
-    feedback.append(f"Rol: {rol} - Importante para el control de los objetivos y la estrategia del equipo.")
+    feedback.append(f"<b>Descripción {rol}:</b> Este rol es crucial para el control de los objetivos y el rendimiento global del equipo. Es importante que mantengas una buena comunicación y un control adecuado del mapa para maximizar el impacto durante la partida.")
     
     return "\n".join(feedback)
 
@@ -138,12 +139,12 @@ if submit:
             st.markdown(f"<div class='feedback'><b>Retroalimentación {roles[i]}:</b><br>{feedback}</div>", unsafe_allow_html=True)
             figs.append((fig, roles[i], feedback))
 
-        # Crear figura compuesta para descarga
-        fig_final = plt.figure(figsize=(15, 10), facecolor='#0e1117')  # Ajustar el tamaño de la figura
-        spec = gridspec.GridSpec(3, 2, figure=fig_final)  # Cambiar la distribución de los gráficos
+        # Crear figura solo con los gráficos para descarga
+        fig_graficos = plt.figure(figsize=(15, 10), facecolor='#0e1117')
+        spec = gridspec.GridSpec(3, 2, figure=fig_graficos)  # Cambiar la distribución de los gráficos
 
         for i, (fig, rol, retro) in enumerate(figs):
-            ax = fig_final.add_subplot(spec[i // 2, i % 2], polar=True)
+            ax = fig_graficos.add_subplot(spec[i // 2, i % 2], polar=True)
             fig_axes = fig.get_axes()[0]
             for line in fig_axes.get_lines():
                 ax.plot(line.get_xdata(), line.get_ydata(), color=line.get_color(), linewidth=2)
@@ -154,16 +155,36 @@ if submit:
             ax.set_yticklabels([])
             ax.set_title(rol, color='white')
 
-            # Ajustar posición del texto para que no se cruce
-            ax.text(0.5, 1.1, retro, horizontalalignment='center', verticalalignment='center', color='white', fontsize=8, transform=ax.transAxes, wrap=True)
+        # Guardar imagen solo con los gráficos como PNG
+        buf_graficos = io.BytesIO()
+        fig_graficos.tight_layout()
+        fig_graficos.savefig(buf_graficos, format="png", dpi=300, bbox_inches='tight')
 
-        # Guardar imagen como PNG
-        buf = io.BytesIO()
-        fig_final.tight_layout()
-        fig_final.savefig(buf, format="png", dpi=300, bbox_inches='tight')
+        # Crear figura solo con las descripciones para descarga
+        fig_descripciones = plt.figure(figsize=(15, 10), facecolor='#0e1117')
+        spec = gridspec.GridSpec(3, 2, figure=fig_descripciones)
+
+        for i, (fig, rol, retro) in enumerate(figs):
+            ax = fig_descripciones.add_subplot(spec[i // 2, i % 2])
+            ax.axis('off')  # Desactivar el gráfico
+            ax.text(0.5, 0.5, retro, horizontalalignment='center', verticalalignment='center', color='white', fontsize=12, wrap=True)
+
+        # Guardar imagen solo con las descripciones como PNG
+        buf_descripciones = io.BytesIO()
+        fig_descripciones.tight_layout()
+        fig_descripciones.savefig(buf_descripciones, format="png", dpi=300, bbox_inches='tight')
+
+        # Botones de descarga para ambas imágenes
         st.download_button(
-            label="📥 Descargar imagen con todos los gráficos y descripciones",
-            data=buf.getvalue(),
+            label="📥 Descargar imagen con todos los gráficos",
+            data=buf_graficos.getvalue(),
             file_name="Graficos_Honor_of_Kings.png",
+            mime="image/png"
+        )
+
+        st.download_button(
+            label="📥 Descargar imagen con todas las descripciones",
+            data=buf_descripciones.getvalue(),
+            file_name="Descripciones_Honor_of_Kings.png",
             mime="image/png"
         )
