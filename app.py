@@ -4,7 +4,9 @@ from math import pi
 import io
 from datetime import datetime
 import pandas as pd
-from fpdf import FPDF  # Importamos FPDF para generar el PDF
+import os
+from fpdf import FPDF
+import tempfile
 
 # Configuración de la página
 st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide")
@@ -12,10 +14,11 @@ st.title("Honor of Kings - Registro Diario de Partidas y Análisis por Línea")
 
 roles = ["TOPLANER", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
 
+# Verifica si ya existe el estado de sesión para las partidas, si no lo inicializa
 if "registro_partidas" not in st.session_state:
     st.session_state.registro_partidas = []
 
-# Funciones de procesamiento
+# Funciones de procesamiento de gráficos y retroalimentación
 def generar_grafico(datos, titulo, maximos, mostrar_en_streamlit=False):
     categorias = list(datos.keys())
     valores = list(datos.values())
@@ -34,7 +37,6 @@ def generar_grafico(datos, titulo, maximos, mostrar_en_streamlit=False):
     ax.set_yticklabels([])
     ax.set_title(titulo, size=14, weight='bold', pad=20)
 
-    # Si queremos mostrar en Streamlit, usamos st.pyplot() directamente
     if mostrar_en_streamlit:
         st.pyplot(fig)
     else:
@@ -65,6 +67,7 @@ def generar_feedback(valores_norm):
         fb.append("Participación baja.")
     return " • ".join(fb)
 
+# Formulario de registro de partidas
 st.header("Registrar Nueva Partida")
 jugadores = []
 
@@ -150,9 +153,17 @@ if st.button("Generar Informe en PDF"):
         promedio = {k: v for k, v in datos.items()}  # Aseguramos que los datos son un diccionario
         fig_buf, _ = generar_grafico(promedio, f"Promedio del día - {partida['fecha']}", list(promedio.values()), mostrar_en_streamlit=False)
         
-        # Convertir el gráfico a imagen y agregarlo al PDF
+        # Guardar la imagen en un archivo temporal
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
         fig_buf.seek(0)
-        pdf.image(fig_buf, x=10, y=pdf.get_y(), w=180)  # Ajusta la posición y el tamaño de la imagen
+        with open(temp_file.name, "wb") as f:
+            f.write(fig_buf.read())
+        
+        # Añadir la imagen al PDF
+        pdf.image(temp_file.name, x=10, y=pdf.get_y(), w=180)  # Ajusta la posición y el tamaño de la imagen
+
+        # Eliminar el archivo temporal después de usarlo
+        os.remove(temp_file.name)
 
     # Guardar el PDF en memoria
     buffer_pdf = io.BytesIO()
