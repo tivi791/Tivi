@@ -18,7 +18,6 @@ if "partidas" not in st.session_state:
 roles = ["TOPLANER", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
 
 # Generar gráfico radial
-
 def generar_grafico(datos, titulo, maximos):
     categorias = list(datos.keys())
     valores = list(datos.values())
@@ -42,7 +41,6 @@ def generar_grafico(datos, titulo, maximos):
     return fig, valores_normalizados
 
 # Feedback profesional
-
 def generar_feedback(valores, rol):
     feedback = []
     dmg, rec, oro, part = valores[:4]
