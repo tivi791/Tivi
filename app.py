@@ -36,6 +36,10 @@ roles = ["🌟 TOPLANER", "🐉 JUNGLER", "🧠 MIDLANER", "🏹 ADCARRY", "🛡
 def generar_grafico(datos, titulo, maximos):
     categorias = list(datos.keys())
     valores = list(datos.values())
+
+    # Aseguramos que maximos tenga la misma longitud que los valores
+    maximos = maximos[:len(valores)]  # Ajustamos el tamaño de maximos
+
     valores_normalizados = [v / maximos[i] * 100 if maximos[i] != 0 else 0 for i, v in enumerate(valores)]
 
     N = len(categorias)
