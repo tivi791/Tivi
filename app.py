@@ -149,8 +149,8 @@ if st.button("Generar Informe en PDF"):
 
         pdf.ln(5)
 
-        # Guardar el gráfico en memoria y agregarlo al PDF
-        promedio = {k: v for k, v in datos.items()}  # Aseguramos que los datos son un diccionario
+        # Generar el gráfico en memoria y agregarlo al PDF
+        promedio = {k: v for k, v in datos.items()}  # Aseguramos que los datos sean un diccionario
         fig_buf, _ = generar_grafico(promedio, f"Promedio del día - {partida['fecha']}", list(promedio.values()), mostrar_en_streamlit=False)
         
         # Guardar la imagen en un archivo temporal
