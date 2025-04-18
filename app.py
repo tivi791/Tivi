@@ -140,11 +140,11 @@ if submit:
             figs.append((fig, roles[i], feedback))
 
         # Crear figura compuesta para descarga
-        fig_final = plt.figure(figsize=(15, 10), facecolor='#0e1117')
-        spec = gridspec.GridSpec(2, 3, figure=fig_final)
+        fig_final = plt.figure(figsize=(15, 12), facecolor='#0e1117')  # Ajustar el tamaño de la figura
+        spec = gridspec.GridSpec(3, 2, figure=fig_final)  # Cambiar la distribución de los gráficos
 
         for i, (fig, rol, retro) in enumerate(figs):
-            ax = fig_final.add_subplot(spec[i // 3, i % 3], polar=True)
+            ax = fig_final.add_subplot(spec[i // 2, i % 2], polar=True)
             fig_axes = fig.get_axes()[0]
             for line in fig_axes.get_lines():
                 ax.plot(line.get_xdata(), line.get_ydata(), color=line.get_color(), linewidth=2)
@@ -155,8 +155,8 @@ if submit:
             ax.set_yticklabels([])
             ax.set_title(rol, color='white')
 
-            # Agregar la descripción y retroalimentación en la figura final
-            ax.text(0.5, -0.2, retro, horizontalalignment='center', verticalalignment='center', color='white', fontsize=10, transform=ax.transAxes)
+            # Ajustar posición del texto para que no se cruce
+            ax.text(0.5, 1.2, retro, horizontalalignment='center', verticalalignment='center', color='white', fontsize=9, transform=ax.transAxes, wrap=True)
 
         # Guardar imagen como PNG
         buf = io.BytesIO()
