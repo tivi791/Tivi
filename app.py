@@ -23,7 +23,7 @@ st.markdown("""
         border-radius: 10px;
         margin-top: 1em;
         color: white;
-        font-size: 0.9em;
+        font-size: 1em;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -48,7 +48,7 @@ def generar_grafico(datos, titulo, maximos):
     ax.plot(angulos, valores_normalizados, color='#1DB954', linewidth=2)
     ax.fill(angulos, valores_normalizados, color='#1DB954', alpha=0.3)
     ax.set_xticks(angulos[:-1])
-    ax.set_xticklabels(categorias, color='white')
+    ax.set_xticklabels(categorias, color='white', fontsize=12)
     ax.set_yticklabels([])
     ax.set_title(titulo, color='white', size=14)
     return fig, valores_normalizados
@@ -151,9 +151,9 @@ if submit:
             for patch in fig_axes.collections:
                 ax.fill(patch.get_paths()[0].vertices[:, 0], patch.get_paths()[0].vertices[:, 1], color=patch.get_facecolor()[0], alpha=0.3)
             ax.set_xticks(fig_axes.get_xticks())
-            ax.set_xticklabels(fig_axes.get_xticklabels(), color='white')
+            ax.set_xticklabels(fig_axes.get_xticklabels(), color='white', fontsize=12)
             ax.set_yticklabels([])
-            ax.set_title(rol, color='white')
+            ax.set_title(rol, color='white', fontsize=16)
 
         # Guardar imagen solo con los gráficos como PNG
         buf_graficos = io.BytesIO()
@@ -167,7 +167,8 @@ if submit:
         for i, (fig, rol, retro) in enumerate(figs):
             ax = fig_descripciones.add_subplot(spec[i // 2, i % 2])
             ax.axis('off')  # Desactivar el gráfico
-            ax.text(0.5, 0.5, retro, horizontalalignment='center', verticalalignment='center', color='white', fontsize=12, wrap=True)
+            # Alinear y mejorar la presentación de las descripciones
+            ax.text(0.5, 0.9, retro, horizontalalignment='center', verticalalignment='top', color='white', fontsize=12, wrap=True)
 
         # Guardar imagen solo con las descripciones como PNG
         buf_descripciones = io.BytesIO()
