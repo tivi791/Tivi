@@ -1,8 +1,9 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 from datetime import datetime
+from PIL import Image
+import io
 
 st.set_page_config(page_title="Honor of Kings - Análisis de Rendimiento", layout="wide")
 st.title("📊 Honor of Kings - Análisis de Rendimiento por Rol")
@@ -16,11 +17,16 @@ def normalizar_datos(valores, maximos_globales):
 # Función para generar gráfico radial
 def generar_grafico(valores, rol):
     categorias = ['Daño Infligido', 'Daño Recibido', 'Oro Total', 'Participación']
-    valores += valores[:1]  # cerrar el gráfico
-    categorias += categorias[:1]
+    
+    # Aseguramos que 'valores' tiene 4 elementos (uno por categoría), y luego agregamos el primero para cerrar el gráfico
+    valores = np.array(valores + [valores[0]])  # Concatenamos el primer valor al final
+    categorias += [categorias[0]]  # Repetimos la primera categoría al final
+    
+    # Calcular los ángulos para cada categoría
     angles = np.linspace(0, 2 * np.pi, len(categorias), endpoint=False).tolist()
-    angles += angles[:1]
-
+    angles += angles[:1]  # Repetimos el primer ángulo para cerrar el gráfico
+    
+    # Crear el gráfico radial
     fig, ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(polar=True))
     ax.plot(angles, valores, linewidth=2, linestyle='solid', label=rol, color='gold')
     ax.fill(angles, valores, alpha=0.3, color='gold')
@@ -72,7 +78,7 @@ for idx, rol in enumerate(roles):
         dmg = st.number_input(f"Daño Infligido ({rol})", min_value=0, value=0)
         rec = st.number_input(f"Daño Recibido ({rol})", min_value=0, value=0)
         oro = st.number_input(f"Oro Total ({rol})", min_value=0, value=0)
-        part = st.number_input(f"Participación ({rol}) (%)", value=0.0, format="%.1f")
+        part = st.number_input(f"Participación ({rol}) (%)", min_value=0.0, value=0.0, format="%.1f")
         valores_roles.append([dmg, rec, oro, part])
 
 # Normalización por máximos globales
@@ -96,9 +102,6 @@ for idx, rol in enumerate(roles):
 
 # Opción para guardar gráficos
 if st.button("📥 Descargar Gráficos como Imagen"):
-    from PIL import Image
-    import io
-
     ancho_total = 2500
     alto_total = 500
     imagen_final = Image.new('RGB', (ancho_total, alto_total), color=(14, 17, 23))
