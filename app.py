@@ -102,6 +102,7 @@ if partidas_hoy:
     acumulado = {rol: {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0} for rol in roles}
     resumen_general = []
     maximos = {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0}
+    promedios_totales = {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0}
 
     for partida in partidas_hoy:
         for i, datos in enumerate(partida["datos"]):
@@ -110,6 +111,13 @@ if partidas_hoy:
                 if datos[k] > maximos[k]:
                     maximos[k] = datos[k]
 
+    # Calcular los promedios
+    total_partidas = len(partidas_hoy)
+    for rol in roles:
+        for k in acumulado[rol]:
+            promedios_totales[k] += acumulado[rol][k]
+    promedios_totales = {k: v / (total_partidas * len(roles)) for k, v in promedios_totales.items()}
+
     # Generar informe en HTML
     html_contenido = f"<h2>Resumen Diario - {fecha_actual}</h2>"
     html_contenido += f"<p>Total de partidas hoy: {len(partidas_hoy)}</p>"
@@ -117,8 +125,7 @@ if partidas_hoy:
     # Resumen general de todas las partidas
     for rol in roles:
         datos = acumulado[rol]
-        partidas_totales = len(partidas_hoy)
-        promedio = {k: v / partidas_totales for k, v in datos.items()}
+        promedio = {k: v / total_partidas for k, v in datos.items()}
         maximos_individuales = list(promedio.values())
 
         # Agregar el gráfico
@@ -142,6 +149,20 @@ if partidas_hoy:
         resumen_general.append(f"• Daño Recibido: {promedio['Daño Recibido']:.2f}")
         resumen_general.append(f"• Oro Total: {promedio['Oro Total']:.2f}")
         resumen_general.append(f"• Participación: {promedio['Participación']:.2f}")
+
+    # Agregar análisis comparativo
+    html_contenido += "<h3>Análisis Comparativo de Jugadores:</h3>"
+    html_contenido += "<ul>"
+    for rol in roles:
+        html_contenido += f"<li><b>{rol}:</b> "
+        promedio_individual = [acumulado[rol][k] / total_partidas for k in acumulado[rol]]
+        for i, (k, promedio_valor) in enumerate(zip(acumulado[rol].keys(), promedio_individual)):
+            if promedio_valor > promedios_totales[k]:
+                html_contenido += f"{k}: <span style='color: green;'>Por encima del promedio</span>, "
+            else:
+                html_contenido += f"{k}: <span style='color: red;'>Por debajo del promedio</span>, "
+        html_contenido += "</li>"
+    html_contenido += "</ul>"
 
     # Mostrar resumen general al final
     html_contenido += "<h3>Resumen General de todas las partidas jugadas:</h3>"
