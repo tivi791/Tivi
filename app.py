@@ -4,6 +4,7 @@ from math import pi
 import io
 import pandas as pd
 from datetime import datetime
+import base64  # Importar base64
 
 # Configuración de la página
 st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide")
