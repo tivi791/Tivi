@@ -1,6 +1,9 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 from math import pi
+import io
+from datetime import datetime
+import matplotlib.gridspec as gridspec
 
 st.set_page_config(page_title="Honor of Kings - Gráficos de Rendimiento", layout="wide")
 st.title("Honor of Kings - Generador de Gráficos Radiales para eSports")
@@ -24,6 +27,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+roles = ["TOPLANER", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
+
 # Función para generar gráfico radial con diseño profesional
 def generar_grafico(datos, titulo, maximos):
     categorias = list(datos.keys())
@@ -45,16 +50,12 @@ def generar_grafico(datos, titulo, maximos):
     ax.set_xticklabels(categorias, color='white')
     ax.set_yticklabels([])
     ax.set_title(titulo, color='white', size=14)
-    st.pyplot(fig)
-    return valores_normalizados
+    return fig, valores_normalizados
 
 # Función para generar retroalimentación profesional
-def generar_feedback(rol, valores_norm):
+def generar_feedback(valores_norm):
     feedback = []
-    dmg = valores_norm[0]
-    rec = valores_norm[1]
-    oro = valores_norm[2]
-    part = valores_norm[3]
+    dmg, rec, oro, part = valores_norm
 
     if dmg > 80:
         feedback.append("Daño infligido sobresaliente, demuestra gran presión en combate.")
@@ -78,8 +79,7 @@ def generar_feedback(rol, valores_norm):
 
     return "\n".join(feedback)
 
-# Inputs por rol de equipo
-roles = ["TOPLANER", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
+# Inputs por jugador
 jugadores = []
 participaciones = []
 
@@ -120,10 +120,40 @@ if submit:
             max_val = max(j[k] for j in jugadores)
             maximos_globales.append(max_val)
 
-        st.subheader("Gráficos de Desempeño por Rol del Equipo")
-        cols = st.columns(5)
+        st.subheader("Gráficos de Desempeño Individual")
+        figs = []
+        feedbacks = []
+
         for i, jugador in enumerate(jugadores):
-            with cols[i]:
-                valores_normalizados = generar_grafico(jugador, roles[i], maximos_globales)
-                retro = generar_feedback(roles[i], valores_normalizados)
-                st.markdown(f"<div class='feedback'><b>Retroalimentación {roles[i]}:</b><br>{retro}</div>", unsafe_allow_html=True)
+            fig, valores_normalizados = generar_grafico(jugador, roles[i], maximos_globales)
+            feedback = generar_feedback(valores_normalizados)
+            st.pyplot(fig)
+            st.markdown(f"<div class='feedback'><b>Retroalimentación {roles[i]}:</b><br>{feedback}</div>", unsafe_allow_html=True)
+            figs.append((fig, roles[i], feedback))
+
+        # Crear figura compuesta para descarga
+        fig_final = plt.figure(figsize=(15, 10), facecolor='#0e1117')
+        spec = gridspec.GridSpec(2, 3, figure=fig_final)
+
+        for i, (fig, rol, retro) in enumerate(figs):
+            ax = fig_final.add_subplot(spec[i // 3, i % 3], polar=True)
+            fig_axes = fig.get_axes()[0]
+            for line in fig_axes.get_lines():
+                ax.plot(line.get_xdata(), line.get_ydata(), color=line.get_color(), linewidth=2)
+            for patch in fig_axes.collections:
+                ax.fill(patch.get_paths()[0].vertices[:, 0], patch.get_paths()[0].vertices[:, 1], color=patch.get_facecolor()[0], alpha=0.3)
+            ax.set_xticks(fig_axes.get_xticks())
+            ax.set_xticklabels(fig_axes.get_xticklabels(), color='white')
+            ax.set_yticklabels([])
+            ax.set_title(rol, color='white')
+
+        # Guardar imagen como PNG
+        buf = io.BytesIO()
+        fig_final.tight_layout()
+        fig_final.savefig(buf, format="png", dpi=300, bbox_inches='tight')
+        st.download_button(
+            label="📥 Descargar imagen con todos los gráficos",
+            data=buf.getvalue(),
+            file_name="Graficos_Honor_of_Kings.png",
+            mime="image/png"
+        )
