@@ -1,138 +1,123 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.backends.backend_agg import RendererAgg
 import os
 from datetime import datetime
-from PIL import Image, ImageDraw, ImageFont
 
-# Configuración de la página
-st.set_page_config(page_title="Análisis de Partida - Honor of Kings", layout="wide")
-st.title("📊 Honor of Kings - Analizador de Partidas eSports")
-st.markdown("Sube las estadísticas de cada línea y obtén gráficos + análisis profesional.")
+_lock = RendererAgg.lock
 
-# Colores por rol
-role_colors = {
-    "TOPLINE": "#1f77b4",
-    "JUNGLE": "#ff7f0e",
-    "MIDLINE": "#2ca02c",
-    "ADCARRY": "#d62728",
-    "SUPPORT": "#9467bd"
-}
+st.set_page_config(page_title="Honor of Kings - Análisis de Rendimiento", layout="wide")
+st.title("📊 Honor of Kings - Análisis de Rendimiento por Rol")
 
-# Función para generar gráfico radar
-def generar_grafico(jugador, valores, maximos):
-    etiquetas = ['Daño Infligido', 'Daño Recibido', 'Oro Total', 'Participación']
-    valores_normalizados = [v / m * 100 if m != 0 else 0 for v, m in zip(valores, maximos)]
-    valores_normalizados += valores_normalizados[:1]
+roles = ["TOPLINE", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
 
-    angulos = np.linspace(0, 2 * np.pi, len(etiquetas), endpoint=False).tolist()
-    angulos += angulos[:1]
+# Función para normalizar datos respecto a máximos globales
+def normalizar_datos(valores, maximos_globales):
+    return [v / m * 100 if m != 0 else 0 for v, m in zip(valores, maximos_globales)]
 
-    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
-    ax.fill(angulos, valores_normalizados, color=role_colors[jugador], alpha=0.6)
-    ax.plot(angulos, valores_normalizados, color=role_colors[jugador], linewidth=2)
+# Función para generar gráfico radial
+def generar_grafico(valores, rol):
+    categorias = ['Daño Infligido', 'Daño Recibido', 'Oro Total', 'Participación']
+    valores += valores[:1]  # cerrar el gráfico
+    categorias += categorias[:1]
+    angles = np.linspace(0, 2 * np.pi, len(categorias), endpoint=False).tolist()
+    angles += angles[:1]
+
+    fig, ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(polar=True))
+    ax.plot(angles, valores, linewidth=2, linestyle='solid', label=rol)
+    ax.fill(angles, valores, alpha=0.3)
     ax.set_yticklabels([])
-    ax.set_xticks(angulos[:-1])
-    ax.set_xticklabels(etiquetas)
-    ax.set_title(jugador, size=16, color=role_colors[jugador])
-
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(categorias, fontsize=10, color='white')
+    ax.set_title(f"{rol}", fontsize=14, color='gold')
+    ax.grid(True, linestyle='--', alpha=0.5)
+    fig.patch.set_facecolor('#0e1117')
+    ax.set_facecolor('#0e1117')
     return fig
 
-# Función para generar feedback basado en valores
-feedback_tipos = {
-    "Daño Infligido": ["poco daño", "daño medio", "excelente daño"],
-    "Daño Recibido": ["fue muy vulnerable", "recibió daño moderado", "tanqueó correctamente"],
-    "Oro Total": ["farmeó poco", "farmeó decentemente", "excelente farmeo"],
-    "Participación": ["participación baja", "participación media", "presente en casi todas las jugadas"]
-}
-
-def generar_feedback(valores):
-    etiquetas = ['Daño Infligido', 'Daño Recibido', 'Oro Total', 'Participación']
+# Función para generar retroalimentación profesional
+def generar_feedback(valores_norm):
+    dmg, rec, oro, part = valores_norm
     feedback = []
-    for i, valor in enumerate(valores):
-        if valor < 33:
-            fb = feedback_tipos[etiquetas[i]][0]
-        elif valor < 66:
-            fb = feedback_tipos[etiquetas[i]][1]
-        else:
-            fb = feedback_tipos[etiquetas[i]][2]
-        feedback.append(f"{etiquetas[i]}: {fb}.")
-    return feedback
+    if dmg > 80:
+        feedback.append("Alto impacto ofensivo, gran presión en el mapa.")
+    elif dmg < 30:
+        feedback.append("Bajo daño infligido, considerar rotaciones y mejor selección de enfrentamientos.")
 
-# Formulario de entrada
-datos = {}
-roles = ["TOPLINE", "JUNGLE", "MIDLINE", "ADCARRY", "SUPPORT"]
+    if rec > 80:
+        feedback.append("Recibió mucho daño, posible mal posicionamiento o mal focus enemigo.")
+    elif rec < 30:
+        feedback.append("Buena evasión o posicionamiento estratégico.")
 
-st.markdown("---")
+    if oro > 80:
+        feedback.append("Gran eficiencia en farmeo y objetivos.")
+    elif oro < 30:
+        feedback.append("Bajo ingreso de oro, podría mejorar la eficiencia en la toma de recursos.")
+
+    if part > 70:
+        feedback.append("Alta participación en peleas, excelente coordinación.")
+    elif part < 30:
+        feedback.append("Baja participación, mejorar presencia en peleas clave.")
+
+    return "\n".join(feedback)
+
+# Entrada de datos
+st.markdown("## Ingreso de Datos por Rol")
+
+valores_roles = []
+inputs = []
+
 cols = st.columns(5)
-
 for idx, rol in enumerate(roles):
     with cols[idx]:
         st.subheader(rol)
-        daño = st.number_input(f"Daño Infligido {rol} (mil)", min_value=0, step=100)
-        recibido = st.number_input(f"Daño Recibido {rol} (mil)", min_value=0, step=100)
-        oro = st.number_input(f"Oro Total {rol} (mil)", min_value=0, step=100)
-        participacion = st.number_input(f"Participación {rol} (%)", min_value=0.0, step=1.0, format="%.1f")
-        datos[rol] = [daño, recibido, oro, participacion]
+        dmg = st.number_input(f"Daño Infligido ({rol})", min_value=0, value=0)
+        rec = st.number_input(f"Daño Recibido ({rol})", min_value=0, value=0)
+        oro = st.number_input(f"Oro Total ({rol})", min_value=0, value=0)
+        part = st.number_input(f"Participación ({rol}) (%)", min_value=0.0, value=0.0, format="%.1f")
+        valores_roles.append([dmg, rec, oro, part])
 
-# Procesar datos
-if st.button("Generar Gráficos y Feedback"):
-    carpeta = "resultados"
-    os.makedirs(carpeta, exist_ok=True)
-    maximos = [max([datos[r][i] for r in roles]) for i in range(4)]
+# Normalización por máximos globales
+valores_array = np.array(valores_roles)
+maximos_globales = valores_array.max(axis=0)
+valores_normalizados = [normalizar_datos(valores, maximos_globales) for valores in valores_roles]
 
-    figs = []
-    feedbacks = []
-    for rol in roles:
-        fig = generar_grafico(rol, datos[rol], maximos)
+# Mostrar gráficos y retroalimentación
+st.markdown("## 📈 Gráficos y Retroalimentación por Rol")
+
+figs = []
+col_graficos = st.columns(5)
+
+for idx, rol in enumerate(roles):
+    with col_graficos[idx]:
+        fig = generar_grafico(valores_normalizados[idx], rol)
+        st.pyplot(fig)
+        st.markdown(f"**Análisis Profesional - {rol}:**")
+        st.markdown(generar_feedback(valores_normalizados[idx]))
         figs.append(fig)
-        feedback = generar_feedback([v / m * 100 if m != 0 else 0 for v, m in zip(datos[rol], maximos)])
-        feedbacks.append((rol, feedback))
 
-    # Mostrar gráficos
-    st.markdown("## 🎯 Resultados por Rol")
-    cols = st.columns(5)
-    for i, rol in enumerate(roles):
-        with cols[i]:
-            st.pyplot(figs[i])
+# Opción para guardar gráficos
+if st.button("📥 Descargar Gráficos como Imagen"):
+    from PIL import Image
+    import io
 
-    # Guardar gráficos y feedbacks como imagen
-    now = datetime.now().strftime("%Y%m%d_%H%M%S")
-    grafico_path = os.path.join(carpeta, f"graficos_{now}.png")
-    feedback_path = os.path.join(carpeta, f"feedback_{now}.png")
+    ancho_total = 2500
+    alto_total = 500
+    imagen_final = Image.new('RGB', (ancho_total, alto_total), color=(14, 17, 23))
 
-    # Guardar imagen con gráficos
-    fig_grid, axarr = plt.subplots(1, 5, figsize=(20, 5), subplot_kw=dict(polar=True))
-    for i in range(5):
-        valores = [v / m * 100 if m != 0 else 0 for v, m in zip(datos[roles[i]], maximos)]
-        valores += valores[:1]
-        angulos = np.linspace(0, 2 * np.pi, len(valores)-1, endpoint=False).tolist()
-        angulos += angulos[:1]
-        ax = axarr[i]
-        ax.fill(angulos, valores, color=role_colors[roles[i]], alpha=0.6)
-        ax.plot(angulos, valores, color=role_colors[roles[i]], linewidth=2)
-        ax.set_xticks(angulos[:-1])
-        ax.set_xticklabels(['Daño', 'Recibido', 'Oro', 'Part'])
-        ax.set_title(roles[i], size=14)
-        ax.set_yticklabels([])
-    plt.tight_layout()
-    fig_grid.savefig(grafico_path)
-    st.success("✅ Imagen de gráficos guardada")
-    with open(grafico_path, "rb") as f:
-        st.download_button("📥 Descargar Gráficos", f, file_name="graficos_partida.png")
+    for i, fig in enumerate(figs):
+        buf = io.BytesIO()
+        fig.savefig(buf, format='png', dpi=200, bbox_inches='tight')
+        buf.seek(0)
+        imagen = Image.open(buf)
+        imagen_final.paste(imagen, (i * 500, 0))
 
-    # Guardar imagen con feedback
-    img = Image.new('RGB', (1000, 500), color='white')
-    draw = ImageDraw.Draw(img)
-    font = ImageFont.load_default()
-    y = 20
-    for rol, lines in feedbacks:
-        draw.text((10, y), f"{rol}", fill=role_colors[rol], font=font)
-        y += 20
-        for line in lines:
-            draw.text((30, y), f"- {line}", fill="black", font=font)
-            y += 20
-        y += 10
-    img.save(feedback_path)
-    with open(feedback_path, "rb") as f:
-        st.download_button("📥 Descargar Feedback", f, file_name="feedback_partida.png")
+    output_buf = io.BytesIO()
+    imagen_final.save(output_buf, format='PNG')
+    st.download_button(
+        label="📸 Descargar Imagen de Gráficos",
+        data=output_buf.getvalue(),
+        file_name=f"graficos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
+        mime="image/png"
+    )
