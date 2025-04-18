@@ -155,12 +155,15 @@ if submit:
             ax.set_yticklabels([])
             ax.set_title(rol, color='white')
 
+            # Agregar la descripción y retroalimentación en la figura final
+            ax.text(0.5, -0.2, retro, horizontalalignment='center', verticalalignment='center', color='white', fontsize=10, transform=ax.transAxes)
+
         # Guardar imagen como PNG
         buf = io.BytesIO()
         fig_final.tight_layout()
         fig_final.savefig(buf, format="png", dpi=300, bbox_inches='tight')
         st.download_button(
-            label="📥 Descargar imagen con todos los gráficos",
+            label="📥 Descargar imagen con todos los gráficos y descripciones",
             data=buf.getvalue(),
             file_name="Graficos_Honor_of_Kings.png",
             mime="image/png"
