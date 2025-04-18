@@ -14,6 +14,7 @@ st.markdown("""
     .stApp {
         background-color: #0e1117;
         color: #FFFFFF;
+        font-family: 'Poppins', sans-serif;
     }
     h1, h2, h3, h4 {
         color: #1DB954;
@@ -25,6 +26,18 @@ st.markdown("""
         margin-top: 1em;
         color: white;
         font-size: 1em;
+        line-height: 1.5;
+    }
+    .stButton>button {
+        background-color: #1DB954;
+        color: white;
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-size: 1em;
+        font-weight: bold;
+    }
+    .stButton>button:hover {
+        background-color: #1a9d44;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -100,7 +113,7 @@ with st.form("form_jugadores"):
         with col3:
             oro = st.number_input(f"Oro Total {rol} (mil)", min_value=0, value=0, key=f"oro_{i}")
         with col4:
-            participacion = st.number_input(f"Participación {rol} (%)", min_value=0, value=0, key=f"part_{i}")  # Se eliminó el límite
+            participacion = st.number_input(f"Participación {rol} (%)", min_value=0, value=0, key=f"part_{i}")  
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -114,7 +127,6 @@ with st.form("form_jugadores"):
     submit = st.form_submit_button("Generar Gráficos")
 
 if submit:
-    # Ya no se necesita validar la suma de las participaciones
     for i in range(5):
         jugadores[i]["Participación"] = participaciones[i]
 
@@ -153,14 +165,14 @@ if submit:
     fig_graficos.tight_layout()
     fig_graficos.savefig(buf_graficos, format="png", dpi=300, bbox_inches='tight')
 
-    fig_descripciones = plt.figure(figsize=(15, 10), facecolor='#0e1117')  # Línea corregida
+    fig_descripciones = plt.figure(figsize=(15, 10), facecolor='#0e1117')
     spec = gridspec.GridSpec(3, 2, figure=fig_descripciones)
 
     for i, (fig, rol, retro) in enumerate(figs):
         ax = fig_descripciones.add_subplot(spec[i // 2, i % 2])
         ax.axis('off')
         ax.text(0.5, 0.95, f"{rol}", ha='center', va='top', color='#1DB954', fontsize=15, weight='bold')
-        ax.text(0.5, 0.85, retro, ha='center', va='top', color='white', fontsize=12, wrap=True)
+        ax.text(0.5, 0.85, retro, ha='center', va='top', color='white', fontsize=12)
 
     buf_descripciones = io.BytesIO()
     fig_descripciones.tight_layout()
