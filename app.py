@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from math import pi
 import io
 from datetime import datetime
-import matplotlib.gridspec as gridspec
 import pandas as pd
 from fpdf import FPDF  # Importamos FPDF para generar el PDF
 
@@ -138,11 +137,12 @@ if st.button("Generar Informe en PDF"):
 
         pdf.ln(5)
 
-    # Descargar el PDF
+    # Guardar el PDF en memoria
     buffer_pdf = io.BytesIO()
     pdf.output(buffer_pdf)
     buffer_pdf.seek(0)
 
+    # Proporcionar el archivo PDF para la descarga
     st.download_button(
         label="Descargar Informe en PDF",
         data=buffer_pdf,
