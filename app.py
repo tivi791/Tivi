@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from math import pi
 import io
 import base64
-import pandas as pd
 from datetime import datetime
 
 # Lista de usuarios permitidos (usuario: contraseña)
@@ -189,10 +188,11 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
 
         for partida in partidas_hoy:
             for i, datos in enumerate(partida["datos"]):
-                for k in datos:
-                    acumulado[roles[i]][k] += datos[k]
-                    if datos[k] > maximos[k]:
-                        maximos[k] = datos[k]
+                if datos["Daño Infligido"] > 0 or datos["Daño Recibido"] > 0 or datos["Oro Total"] > 0 or datos["Participación"] > 0:
+                    for k in datos:
+                        acumulado[roles[i]][k] += datos[k]
+                        if datos[k] > maximos[k]:
+                            maximos[k] = datos[k]
 
         # Calcular los promedios
         total_partidas = len(partidas_hoy)
@@ -209,28 +209,29 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
         # Resumen general de todas las partidas
         for rol in roles:
             datos = acumulado[rol]
-            promedio = {k: v / total_partidas for k, v in datos.items()}
-            maximos_individuales = list(promedio.values())
+            if datos["Daño Infligido"] > 0 or datos["Daño Recibido"] > 0 or datos["Oro Total"] > 0 or datos["Participación"] > 0:
+                promedio = {k: v / total_partidas for k, v in datos.items()}
+                maximos_individuales = list(promedio.values())
 
-            # Agregar el gráfico
-            categorias = list(promedio.keys())
-            grafico_buf = generar_grafico(promedio, f"{rol} - Desempeño Promedio", categorias, maximos)
+                # Agregar el gráfico
+                categorias = list(promedio.keys())
+                grafico_buf = generar_grafico(promedio, f"{rol} - Desempeño Promedio", categorias, maximos)
 
-            # Crear imagen en base64 para ser mostrada
-            b64_grafico = base64.b64encode(grafico_buf.getvalue()).decode('utf-8')
-            img_html = f'<img src="data:image/png;base64,{b64_grafico}" width="600" />'
+                # Crear imagen en base64 para ser mostrada
+                b64_grafico = base64.b64encode(grafico_buf.getvalue()).decode('utf-8')
+                img_html = f'<img src="data:image/png;base64,{b64_grafico}" width="600" />'
 
-            mensaje, calificacion = calificar_desempeno(maximos_individuales, rol)
+                mensaje, calificacion = calificar_desempeno(maximos_individuales, rol)
 
-            html_contenido += f"<h3>{rol}</h3>"
-            html_contenido += f"<p><strong>Promedio de estadísticas:</strong></p>"
-            html_contenido += f"<ul><li>Daño Infligido Promedio: {promedio['Daño Infligido']}</li>"
-            html_contenido += f"<li>Daño Recibido Promedio: {promedio['Daño Recibido']}</li>"
-            html_contenido += f"<li>Oro Total Promedio: {promedio['Oro Total']}</li>"
-            html_contenido += f"<li>Participación Promedio: {promedio['Participación']}</li></ul>"
-            html_contenido += f"<p><strong>Gráfico de Desempeño:</strong></p>"
-            html_contenido += img_html
-            html_contenido += f"<p><strong>Calificación: {calificacion}</strong></p>"
-            html_contenido += f"<p><strong>Retroalimentación:</strong> {mensaje}</p>"
+                html_contenido += f"<h3>{rol}</h3>"
+                html_contenido += f"<p><strong>Promedio de estadísticas:</strong></p>"
+                html_contenido += f"<ul><li>Daño Infligido Promedio: {promedio['Daño Infligido']}</li>"
+                html_contenido += f"<li>Daño Recibido Promedio: {promedio['Daño Recibido']}</li>"
+                html_contenido += f"<li>Oro Total Promedio: {promedio['Oro Total']}</li>"
+                html_contenido += f"<li>Participación Promedio: {promedio['Participación']}</li></ul>"
+                html_contenido += f"<p><strong>Gráfico de Desempeño:</strong></p>"
+                html_contenido += img_html
+                html_contenido += f"<p><strong>Calificación: {calificacion}</strong></p>"
+                html_contenido += f"<p><strong>Retroalimentación:</strong> {mensaje}</p>"
 
         st.markdown(html_contenido, unsafe_allow_html=True)
