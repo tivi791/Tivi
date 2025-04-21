@@ -190,8 +190,7 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
         for partida in partidas_hoy:
             for i, datos in enumerate(partida["datos"]):
                 for k in datos:
-                    if datos[k] > 0:  # Solo sumar valores positivos
-                        acumulado[roles[i]][k] += datos[k]
+                    acumulado[roles[i]][k] += datos[k]
                     if datos[k] > maximos[k]:
                         maximos[k] = datos[k]
 
@@ -199,18 +198,39 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
         total_partidas = len(partidas_hoy)
         for rol in roles:
             for k in acumulado[rol]:
-                if total_partidas > 0:
-                    promedios_totales[k] = acumulado[rol][k] / total_partidas
+                promedios_totales[k] += acumulado[rol][k]
+        promedios_totales = {k: v / (total_partidas * len(roles)) for k, v in promedios_totales.items()}
 
-        # Calificar cada rol
+        # Generar informe en HTML
+        html_contenido = f"<h2>Resumen Diario - {fecha_actual}</h2>"
+        html_contenido += f"<p>Total de partidas hoy: {len(partidas_hoy)}</p>"
+        html_contenido += f"<p>Equipo: WOLF SEEKERS E-SPORTS (LAS)</p>"
+
+        # Resumen general de todas las partidas
         for rol in roles:
-            st.subheader(f"{rol}")
-            promedio_vals = [promedios_totales["Daño Infligido"], promedios_totales["Daño Recibido"],
-                             promedios_totales["Oro Total"], promedios_totales["Participación"]]
-            mensaje, calificacion = calificar_desempeno(promedio_vals, rol)
-            st.write(f"Calificación: {calificacion}")
-            st.write(mensaje)
+            datos = acumulado[rol]
+            promedio = {k: v / total_partidas for k, v in datos.items()}
+            maximos_individuales = list(promedio.values())
 
-            # Generar gráficos para cada rol
-            fig = generar_grafico(promedios_totales, f"Desempeño Promedio {rol}", list(promedios_totales.keys()), maximos)
-            st.pyplot(fig)
+            # Agregar el gráfico
+            categorias = list(promedio.keys())
+            grafico_buf = generar_grafico(promedio, f"{rol} - Desempeño Promedio", categorias, maximos)
+
+            # Crear imagen en base64 para ser mostrada
+            b64_grafico = base64.b64encode(grafico_buf.getvalue()).decode('utf-8')
+            img_html = f'<img src="data:image/png;base64,{b64_grafico}" width="600" />'
+
+            mensaje, calificacion = calificar_desempeno(maximos_individuales, rol)
+
+            html_contenido += f"<h3>{rol}</h3>"
+            html_contenido += f"<p><strong>Promedio de estadísticas:</strong></p>"
+            html_contenido += f"<ul><li>Daño Infligido Promedio: {promedio['Daño Infligido']}</li>"
+            html_contenido += f"<li>Daño Recibido Promedio: {promedio['Daño Recibido']}</li>"
+            html_contenido += f"<li>Oro Total Promedio: {promedio['Oro Total']}</li>"
+            html_contenido += f"<li>Participación Promedio: {promedio['Participación']}</li></ul>"
+            html_contenido += f"<p><strong>Gráfico de Desempeño:</strong></p>"
+            html_contenido += img_html
+            html_contenido += f"<p><strong>Calificación: {calificacion}</strong></p>"
+            html_contenido += f"<p><strong>Retroalimentación:</strong> {mensaje}</p>"
+
+        st.markdown(html_contenido, unsafe_allow_html=True)
