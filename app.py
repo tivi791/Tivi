@@ -171,27 +171,6 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
             html_contenido += f"<img src='data:image/png;base64,{grafico_base64}' width='500'/>"
             html_contenido += f"<p><b>Análisis:</b> {generar_feedback(maximos_individuales)}</p>"
 
-            # Resumen general de la partida
-            resumen_general.append(f"En {rol}, el rendimiento promedio fue:")
-            resumen_general.append(f"• Daño Infligido: {promedio['Daño Infligido']:.2f}")
-            resumen_general.append(f"• Daño Recibido: {promedio['Daño Recibido']:.2f}")
-            resumen_general.append(f"• Oro Total: {promedio['Oro Total']:.2f}")
-            resumen_general.append(f"• Participación: {promedio['Participación']:.2f}")
-
-        # Agregar análisis comparativo
-        html_contenido += "<h3>Análisis Comparativo de Jugadores:</h3>"
-        html_contenido += "<ul>"
-        for rol in roles:
-            html_contenido += f"<li><b>{rol}:</b> "
-            promedio_individual = [acumulado[rol][k] / total_partidas for k in acumulado[rol]]
-            for i, (k, promedio_valor) in enumerate(zip(acumulado[rol].keys(), promedio_individual)):
-                if promedio_valor > promedios_totales[k]:
-                    html_contenido += f"{k}: <span style='color: green;'>Por encima del promedio</span>, "
-                else:
-                    html_contenido += f"{k}: <span style='color: red;'>Por debajo del promedio</span>, "
-            html_contenido += "</li>"
-        html_contenido += "</ul>"
-
         # Mostrar resumen general al final
         html_contenido += "<h3>Resumen General de todas las partidas jugadas:</h3>"
         html_contenido += "<ul>"
