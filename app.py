@@ -69,111 +69,63 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
         return buf
 
     def generar_feedback_por_rol(rol, valores_norm):
-    dmg, rec, oro, part = valores_norm[:4]
-    fb = []
+        # Desempeño por rol
+        dmg, rec, oro, part = valores_norm[:4]
+        fb = []
 
-    if rol == "TOPLANER":
-        # Toplaner feedback
-        if dmg < 50:
-            fb.append("Daño infligido bajo. Asegúrate de aprovechar las oportunidades para hostigar al enemigo y aplicar presión en la línea.")
-        elif dmg > 80:
-            fb.append("Excelente daño infligido. Eres una fuente de presión importante en la línea.")
+        if rol == "TOPLANER":
+            if dmg > 80:
+                fb.append("Daño infligido sobresaliente para el rol de Toplaner.")
+            elif dmg < 40:
+                fb.append("Daño infligido bajo, considera mejorar tu agresividad.")
+            if rec > 70:
+                fb.append("Excesivo daño recibido, intenta jugar más defensivo.")
+            if part > 60:
+                fb.append("Buena participación en peleas de equipo y objetivos.")
+            elif part < 40:
+                fb.append("Baja participación en peleas, intenta involucrarte más en las teamfights.")
         
-        if rec > 60:
-            fb.append("Recibes mucho daño. Considera mejorar tu posicionamiento y buscar más apoyo de tu jungler.")
-        elif rec < 40:
-            fb.append("Buen manejo del daño recibido. Estás posicionándote bien para evitar ataques enemigos.")
+        elif rol == "JUNGLER":
+            if dmg > 70:
+                fb.append("Daño infligido bueno para un Jungler, pero no olvides los objetivos.")
+            if oro > 50:
+                fb.append("Buena economía para un Jungler, ayuda en las rotaciones y ganks.")
+            if part > 80:
+                fb.append("Alta participación en peleas y objetivos, gran control del mapa.")
+            elif part < 40:
+                fb.append("Poca participación en peleas o objetivos, intenta ser más proactivo.")
         
-        if oro < 60:
-            fb.append("Tu oro es bajo. Necesitas mejorar el farmeo y buscar más oportunidades para obtener recursos.")
-        elif oro > 80:
-            fb.append("Buen control del oro. Estás maximizando tus recursos y lo que necesitas para tu construcción.")
+        elif rol == "MIDLANER":
+            if dmg > 80:
+                fb.append("Gran daño infligido, muy buen control de la línea.")
+            elif dmg < 50:
+                fb.append("Daño infligido bajo, intenta aprovechar las rotaciones.")
+            if part > 70:
+                fb.append("Participación excelente en peleas de equipo.")
+            elif part < 40:
+                fb.append("Baja participación, debes rotar más y controlar la visión.")
         
-        if part < 50:
-            fb.append("Tu participación es baja. Necesitas estar más involucrado en las peleas y en los objetivos del equipo.")
-        elif part > 70:
-            fb.append("Excelente participación. Estás impactando las peleas de equipo y contribuyendo a los objetivos.")
-    
-    elif rol == "JUNGLER":
-        # Jungler feedback
-        if dmg < 60:
-            fb.append("Daño infligido bajo. Considera mejorar tus rutas de jungla y buscar ganks más efectivos.")
-        elif dmg > 80:
-            fb.append("Buen daño infligido. Estás contribuyendo de manera significativa a las peleas y el control del mapa.")
+        elif rol == "ADCARRY":
+            if dmg > 90:
+                fb.append("Daño sobresaliente, ¡tu presencia en peleas es vital!")
+            elif dmg < 60:
+                fb.append("Daño infligido bajo, intenta maximizar tu daño durante las peleas.")
+            if oro > 70:
+                fb.append("Excelente manejo de la economía, sigue así para obtener más daño.")
+            if part > 60:
+                fb.append("Buena participación en peleas, pero asegúrate de estar bien protegido por tu Support.")
         
-        if rec > 60:
-            fb.append("Excesivo daño recibido. Asegúrate de tener visión y evitar entrar en situaciones comprometidas sin el control adecuado.")
+        elif rol == "SUPPORT":
+            if part > 80:
+                fb.append("Gran participación en peleas y visión, mantienes a tu equipo a salvo.")
+            if oro < 30:
+                fb.append("Baja economía, pero el Support no necesita tanto oro, enfócate en la protección.")
+            if dmg < 30:
+                fb.append("Poco daño infligido, como Support no es una prioridad, pero trata de contribuir más.")
+            if part < 50:
+                fb.append("Baja participación en peleas, intenta involucrarte más en la protección de tu equipo.")
         
-        if oro < 70:
-            fb.append("Oro bajo. Aprovecha más los campamentos de la jungla y participa en los objetivos del mapa.")
-        elif oro > 80:
-            fb.append("Buen control de la jungla. Estás maximizando los recursos y participando bien en las rotaciones.")
-        
-        if part < 60:
-            fb.append("Tu participación es baja. Como jungler, es esencial que estés presente en los momentos clave del juego.")
-        elif part > 80:
-            fb.append("Excelente participación. Estás impactando el mapa y asegurando los objetivos correctamente.")
-    
-    elif rol == "MIDLANER":
-        # Midlane feedback
-        if dmg < 60:
-            fb.append("Tu daño infligido es bajo. Necesitas ser más agresivo y aprovechar las oportunidades para impactar las peleas.")
-        elif dmg > 80:
-            fb.append("Excelente daño infligido. Estás dominando tu rol y haciendo una gran presión en las peleas.")
-        
-        if rec > 50:
-            fb.append("Daño recibido elevado. Asegúrate de tener control sobre tus rotaciones y posicionarte mejor.")
-        
-        if oro < 70:
-            fb.append("Tu oro es bajo. Necesitas mejorar en el control de oleadas y en la gestión de tus recursos.")
-        elif oro > 80:
-            fb.append("Buen manejo del oro. Estás obteniendo recursos eficientemente para escalar en el juego.")
-        
-        if part < 60:
-            fb.append("Tu participación es baja. Necesitas moverte por el mapa y participar más en las rotaciones.")
-        elif part > 80:
-            fb.append("Excelente participación. Tu control del mapa y tu impacto en peleas clave son notables.")
-    
-    elif rol == "ADCARRY":
-        # ADC feedback
-        if dmg < 60:
-            fb.append("Daño infligido bajo. Como ADC, necesitas maximizar tu daño, especialmente en las peleas de equipo.")
-        elif dmg > 80:
-            fb.append("Excelente daño infligido. Estás siendo una gran fuente de daño en el juego tardío.")
-        
-        if rec > 50:
-            fb.append("Recibes mucho daño. Es crucial que confíes en tu soporte y tengas un posicionamiento seguro.")
-        
-        if oro < 80:
-            fb.append("Oro bajo. Necesitas mejorar en el farmeo y buscar más oportunidades para obtener recursos.")
-        elif oro > 90:
-            fb.append("Excelente control de oro. Estás maximizando tus recursos para llegar al final de la partida más fuerte.")
-        
-        if part < 50:
-            fb.append("Tu participación es baja. Como ADC, deberías estar más involucrado en las peleas de equipo.")
-        elif part > 70:
-            fb.append("Excelente participación. Estás maximizando tu impacto en las peleas y contribuyendo al equipo.")
-    
-    elif rol == "SUPPORT":
-        # Support feedback
-        if dmg > 40:
-            fb.append("Buen daño infligido para un soporte, pero recuerda que tu objetivo principal es proteger y asistir.")
-        
-        if rec > 50:
-            fb.append("Recibes mucho daño. Asegúrate de mantenerte en una posición segura para proteger a tu ADC.")
-        
-        if oro < 60:
-            fb.append("Oro bajo. Considera invertir más tiempo en ayudar a tu equipo y mejorar tu visión del mapa.")
-        elif oro > 70:
-            fb.append("Buen manejo del oro. Estás ayudando a tu equipo a obtener control de visión y objetos clave.")
-        
-        if part < 60:
-            fb.append("Tu participación es baja. Como soporte, es fundamental que estés involucrado en las peleas y en el control de visión.")
-        elif part > 80:
-            fb.append("Excelente participación. Estás siendo un gran soporte en las peleas y ayudando a tu equipo con la visión.")
-    
-    return " • ".join(fb)
-)
+        return " • ".join(fb)
 
     # Formulario de registro de partidas
     st.header("Registrar Nueva Partida")
@@ -226,73 +178,18 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
                         maximos[k] = datos[k]
 
         # Calcular los promedios
-        total_partidas = len(partidas_hoy)
         for rol in roles:
             for k in acumulado[rol]:
-                promedios_totales[k] += acumulado[rol][k]
-        promedios_totales = {k: v / (total_partidas * len(roles)) for k, v in promedios_totales.items()}
+                promedios_totales[k] = acumulado[rol][k] / len(partidas_hoy)
 
-        # Generar informe en HTML
-        html_contenido = f"<h2>Resumen Diario - {fecha_actual}</h2>"
-        html_contenido += f"<p>Total de partidas hoy: {len(partidas_hoy)}</p>"
-
-        # Resumen general de todas las partidas
+        # Mostrar resumen general y retroalimentación
         for rol in roles:
-            datos = acumulado[rol]
-            promedio = {k: v / total_partidas for k, v in datos.items()}
-            maximos_individuales = list(promedio.values())
+            st.write(f"**Resumen de {rol}:**")
+            st.write(f"Daño Infligido Promedio: {promedios_totales['Daño Infligido']}")
+            st.write(f"Daño Recibido Promedio: {promedios_totales['Daño Recibido']}")
+            st.write(f"Oro Promedio: {promedios_totales['Oro Total']}")
+            st.write(f"Participación Promedio: {promedios_totales['Participación']}")
+            st.write(f"**Retroalimentación:** {generar_feedback_por_rol(rol, [promedios_totales['Daño Infligido'], promedios_totales['Daño Recibido'], promedios_totales['Oro Total'], promedios_totales['Participación']])}")
 
-            # Agregar el gráfico
-            categorias = list(promedio.keys())
-            grafico_buf = generar_grafico(promedio, f"Promedio del día - {rol}", categorias, maximos)
-            grafico_base64 = base64.b64encode(grafico_buf.read()).decode('utf-8')
-
-            # Agregar la información y el gráfico
-            html_contenido += f"<h3>{rol}</h3>"
-            html_contenido += f"<p><b>Datos:</b></p>"
-            html_contenido += f"<ul>"
-            for k, v in promedio.items():
-                html_contenido += f"<li><b>{k}:</b> {v:.2f}</li>"
-            html_contenido += f"</ul>"
-            html_contenido += f"<img src='data:image/png;base64,{grafico_base64}' width='500'/>"
-            html_contenido += f"<p><b>Análisis:</b> {generar_feedback(maximos_individuales)}</p>"
-
-            # Resumen general de la partida
-            resumen_general.append(f"En {rol}, el rendimiento promedio fue:")
-            resumen_general.append(f"• Daño Infligido: {promedio['Daño Infligido']:.2f}")
-            resumen_general.append(f"• Daño Recibido: {promedio['Daño Recibido']:.2f}")
-            resumen_general.append(f"• Oro Total: {promedio['Oro Total']:.2f}")
-            resumen_general.append(f"• Participación: {promedio['Participación']:.2f}")
-
-        # Agregar análisis comparativo
-        html_contenido += "<h3>Análisis Comparativo de Jugadores:</h3>"
-        html_contenido += "<ul>"
-        for rol in roles:
-            html_contenido += f"<li><b>{rol}:</b> "
-            promedio_individual = [acumulado[rol][k] / total_partidas for k in acumulado[rol]]
-            for i, (k, promedio_valor) in enumerate(zip(acumulado[rol].keys(), promedio_individual)):
-                if promedio_valor > promedios_totales[k]:
-                    html_contenido += f"{k}: <span style='color: green;'>Por encima del promedio</span>, "
-                else:
-                    html_contenido += f"{k}: <span style='color: red;'>Por debajo del promedio</span>, "
-            html_contenido += "</li>"
-        html_contenido += "</ul>"
-
-        # Mostrar resumen general al final
-        html_contenido += "<h3>Resumen General de todas las partidas jugadas:</h3>"
-        html_contenido += "<ul>"
-        for item in resumen_general:
-            html_contenido += f"<li>{item}</li>"
-        html_contenido += "</ul>"
-
-        st.markdown(html_contenido, unsafe_allow_html=True)
-
-        # Opción para descargar el informe en formato HTML
-        st.download_button(
-            label="Descargar Informe en HTML",
-            data=html_contenido,
-            file_name="informe_honor_of_kings.html",
-            mime="text/html"
-        )
-else:
-    st.info("Por favor, inicia sesión para acceder al registro de partidas.")
+    else:
+        st.write("No se han registrado partidas hoy.")
