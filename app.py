@@ -16,7 +16,7 @@ def autenticar_usuario(usuario, clave):
 
 # Función para calificar el desempeño
 def calificar_desempeno(valores_norm, rol):
-    dmg, rec, oro, part = valores_norm[:4]
+    dmg, rec, oro, part, kills, deaths, assists = valores_norm[:7]
     calificacion = ""
     mensaje = ""
 
@@ -36,6 +36,17 @@ def calificar_desempeno(valores_norm, rol):
             mensaje += " Participación en peleas baja."
             calificacion = "Bajo"
 
+        # Evaluar kills, deaths y assists
+        if kills < 1:
+            mensaje += " Necesita obtener más asesinatos."
+            calificacion = "Bajo"
+        if deaths > 5:
+            mensaje += " Muchas muertes."
+            calificacion = "Bajo"
+        if assists < 3:
+            mensaje += " Pocas asistencias."
+            calificacion = "Bajo"
+
     elif rol == "JUNGLER":
         if oro < 60:
             mensaje = "La economía podría mejorar."
@@ -47,6 +58,17 @@ def calificar_desempeno(valores_norm, rol):
 
         if part < 40:
             mensaje += " Participación en peleas baja."
+            calificacion = "Bajo"
+
+        # Evaluar kills, deaths y assists
+        if kills < 3:
+            mensaje += " Necesita más asesinatos."
+            calificacion = "Bajo"
+        if deaths > 4:
+            mensaje += " Muchas muertes."
+            calificacion = "Bajo"
+        if assists < 4:
+            mensaje += " Pocas asistencias."
             calificacion = "Bajo"
 
     elif rol == "MIDLANER":
@@ -62,6 +84,17 @@ def calificar_desempeno(valores_norm, rol):
             mensaje += " Necesita participar más."
             calificacion = "Bajo"
 
+        # Evaluar kills, deaths y assists
+        if kills < 2:
+            mensaje += " Necesita más asesinatos."
+            calificacion = "Bajo"
+        if deaths > 4:
+            mensaje += " Muchas muertes."
+            calificacion = "Bajo"
+        if assists < 3:
+            mensaje += " Pocas asistencias."
+            calificacion = "Bajo"
+
     elif rol == "ADCARRY":
         if dmg < 80:
             mensaje = "Daño infligido bajo."
@@ -69,6 +102,17 @@ def calificar_desempeno(valores_norm, rol):
 
         if rec > 60:
             mensaje += " Daño recibido alto."
+            calificacion = "Bajo"
+
+        # Evaluar kills, deaths y assists
+        if kills < 4:
+            mensaje += " Necesita más asesinatos."
+            calificacion = "Bajo"
+        if deaths > 3:
+            mensaje += " Muchas muertes."
+            calificacion = "Bajo"
+        if assists < 3:
+            mensaje += " Pocas asistencias."
             calificacion = "Bajo"
 
     elif rol == "SUPPORT":
@@ -79,6 +123,17 @@ def calificar_desempeno(valores_norm, rol):
         if part > 70:
             mensaje = "Excelente participación en peleas."
             calificacion = "Excelente"
+
+        # Evaluar kills, deaths y assists
+        if kills < 1:
+            mensaje += " Necesita más asesinatos."
+            calificacion = "Bajo"
+        if deaths > 2:
+            mensaje += " Muchas muertes."
+            calificacion = "Bajo"
+        if assists < 5:
+            mensaje += " Pocas asistencias."
+            calificacion = "Bajo"
 
     if calificacion == "Bajo":
         mensaje = f"Desempeño bajo. Requiere mejorar: {mensaje}"
@@ -149,7 +204,7 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
     with st.form("registro_form"):
         for i, rol in enumerate(roles):
             st.subheader(f"{rol}")
-            col1, col2, col3, col4 = st.columns(4)
+            col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
             with col1:
                 dmg = st.number_input(f"Daño Infligido ({rol})", min_value=0, key=f"dmg_{i}")
             with col2:
@@ -158,7 +213,13 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
                 oro = st.number_input(f"Oro Total ({rol})", min_value=0, key=f"oro_{i}")
             with col4:
                 part = st.number_input(f"Participación (%) ({rol})", min_value=0, value=0, key=f"part_{i}")
-            jugadores.append({"Daño Infligido": dmg, "Daño Recibido": rec, "Oro Total": oro, "Participación": part})
+            with col5:
+                kills = st.number_input(f"Asesinatos ({rol})", min_value=0, key=f"kills_{i}")
+            with col6:
+                deaths = st.number_input(f"Muertes ({rol})", min_value=0, key=f"deaths_{i}")
+            with col7:
+                assists = st.number_input(f"Asistencias ({rol})", min_value=0, key=f"assists_{i}")
+            jugadores.append({"Daño Infligido": dmg, "Daño Recibido": rec, "Oro Total": oro, "Participación": part, "Asesinatos": kills, "Muertes": deaths, "Asistencias": assists})
 
         submit = st.form_submit_button("Guardar Partida")
 
@@ -178,22 +239,24 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
     st.write(f"Total de partidas hoy: {len(partidas_hoy)}")
 
     if partidas_hoy:
-        acumulado = {rol: {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0} for rol in roles}
+        acumulado = {rol: {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0, "Asesinatos": 0, "Muertes": 0, "Asistencias": 0} for rol in roles}
         maximos = {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0}
-        promedios_totales = {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0}
+
+        promedios_totales = {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0, "Asesinatos": 0, "Muertes": 0, "Asistencias": 0}
 
         for partida in partidas_hoy:
             for i, datos in enumerate(partida["datos"]):
                 if any(datos[k] > 0 for k in datos):
                     for k in datos:
                         acumulado[roles[i]][k] += datos[k]
-                        if datos[k] > maximos[k]:
+                        if datos[k] > maximos.get(k, 0):
                             maximos[k] = datos[k]
 
         total_partidas = len(partidas_hoy)
         for rol in roles:
             for k in acumulado[rol]:
                 promedios_totales[k] += acumulado[rol][k]
+
         promedios_totales = {k: v / (total_partidas * len(roles)) for k, v in promedios_totales.items()}
 
         html_contenido = f"<h2>Resumen Diario - {fecha_actual}</h2>"
@@ -212,19 +275,14 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
                 mensaje, calificacion = calificar_desempeno(list(promedio.values()), rol)
 
                 html_contenido += f"<h3>{rol}</h3>"
-                html_contenido += f"<ul><li>Daño Infligido Promedio: {promedio['Daño Infligido']}</li>"
-                html_contenido += f"<li>Daño Recibido Promedio: {promedio['Daño Recibido']}</li>"
-                html_contenido += f"<li>Oro Total Promedio: {promedio['Oro Total']}</li>"
-                html_contenido += f"<li>Participación Promedio: {promedio['Participación']}</li></ul>"
-                html_contenido += f"<p><strong>Gráfico de Desempeño:</strong></p>"
-                html_contenido += img_html
-                html_contenido += f"<p><strong>Calificación: {calificacion}</strong></p>"
-                html_contenido += f"<p><strong>Retroalimentación:</strong> {mensaje}</p>"
+                html_contenido += f"<ul><li>Daño Infligido Promedio: {promedio['Daño Infligido']:.2f}</li>"
+                html_contenido += f"<li>Daño Recibido Promedio: {promedio['Daño Recibido']:.2f}</li>"
+                html_contenido += f"<li>Oro Total Promedio: {promedio['Oro Total']:.2f}</li>"
+                html_contenido += f"<li>Participación Promedio: {promedio['Participación']:.2f}%</li>"
+                html_contenido += f"<li>Asesinatos Promedio: {promedio['Asesinatos']:.2f}</li>"
+                html_contenido += f"<li>Muertes Promedio: {promedio['Muertes']:.2f}</li>"
+                html_contenido += f"<li>Asistencias Promedio: {promedio['Asistencias']:.2f}</li>"
+                html_contenido += f"<li>Calificación: <strong>{calificacion}</strong></li>"
+                html_contenido += f"</ul>{img_html}"
 
-        # Agregar botón de descarga
-        st.download_button(
-            label="Descargar Resumen en HTML",
-            data=html_contenido,
-            file_name=f"resumen_partidas_{fecha_actual}.html",
-            mime="text/html"
-        )
+        st.markdown(html_contenido, unsafe_allow_html=True)
