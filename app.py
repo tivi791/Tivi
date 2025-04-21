@@ -3,9 +3,7 @@ import matplotlib.pyplot as plt
 from math import pi
 import io
 import base64
-import pandas as pd
 from datetime import datetime
-import os
 import subprocess
 
 # Lista de usuarios permitidos (usuario: contraseña)
@@ -22,11 +20,27 @@ def guardar_informe_html(html_contenido):
         with open(ruta_archivo, "w", encoding="utf-8") as f:
             f.write(html_contenido)
 
-        # Ejecutar comandos de Git
+        # Configurar Git si no está configurado
+        subprocess.run(["git", "config", "--global", "user.name", "AutoUploader"], check=True)
+        subprocess.run(["git", "config", "--global", "user.email", "autobot@ejemplo.com"], check=True)
+
+        # Agregar a staging
         subprocess.run(["git", "add", ruta_archivo], check=True)
-        subprocess.run(["git", "commit", "-m", f"Informe diario actualizado {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"], check=True)
+
+        # Verificar si hay cambios nuevos
+        diff_check = subprocess.run(["git", "diff", "--cached", "--quiet"])
+        if diff_check.returncode == 0:
+            st.info("No hay cambios nuevos para subir a GitHub.")
+            return
+
+        # Commit y push
+        commit_msg = f"Informe diario actualizado {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        subprocess.run(["git", "commit", "-m", commit_msg], check=True)
         subprocess.run(["git", "push"], check=True)
+
         st.success("Informe guardado y subido al repositorio GitHub correctamente.")
+    except subprocess.CalledProcessError as e:
+        st.warning(f"Error ejecutando un comando de Git: {e}")
     except Exception as e:
         st.warning(f"No se pudo subir el archivo a GitHub: {e}")
 
@@ -34,12 +48,11 @@ def guardar_informe_html(html_contenido):
 st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide")
 st.title("Honor of Kings - Registro Diario de Partidas y Análisis por Línea")
 
-# Formulario de inicio de sesión
+# Inicio de sesión
 st.sidebar.header("Iniciar sesión")
 usuario_ingresado = st.sidebar.text_input("Usuario")
 clave_ingresada = st.sidebar.text_input("Contraseña", type="password")
 
-# Botón de inicio de sesión
 if st.sidebar.button("Iniciar sesión"):
     if autenticar_usuario(usuario_ingresado, clave_ingresada):
         st.session_state.autenticado = True
@@ -47,17 +60,14 @@ if st.sidebar.button("Iniciar sesión"):
     else:
         st.sidebar.error("Usuario o contraseña incorrectos.")
 
-# Si el usuario está autenticado, muestra el contenido de la app
 if st.session_state.get("autenticado", False):
     roles = ["TOPLANER", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
-
     if "registro_partidas" not in st.session_state:
         st.session_state.registro_partidas = []
 
     def generar_grafico(datos, titulo, categorias, maximos):
         valores = list(datos.values())
         valores_normalizados = [v / maximos[c] * 100 if maximos[c] != 0 else 0 for v, c in zip(valores, categorias)]
-
         N = len(categorias)
         angulos = [n / float(N) * 2 * pi for n in range(N)]
         valores_normalizados += valores_normalizados[:1]
@@ -118,7 +128,7 @@ if st.session_state.get("autenticado", False):
 
     if submit:
         if all(d["Daño Infligido"] == 0 and d["Daño Recibido"] == 0 and d["Oro Total"] == 0 and d["Participación"] == 0 for d in jugadores):
-            st.error("Por favor, complete todos los campos con datos válidos.")
+            st.error("Por favor, completa todos los campos con datos válidos.")
         else:
             st.session_state.registro_partidas.append({
                 "fecha": datetime.now().strftime("%Y-%m-%d"),
@@ -174,10 +184,8 @@ if st.session_state.get("autenticado", False):
 
         st.markdown(html_contenido, unsafe_allow_html=True)
 
-        # Guardar localmente + en GitHub
         guardar_informe_html(html_contenido)
 
-        # Botón para descargar
         st.download_button(
             label="Descargar Informe en HTML",
             data=html_contenido,
