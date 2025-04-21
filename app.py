@@ -15,6 +15,82 @@ def autenticar_usuario(usuario, clave):
         return True
     return False
 
+# Función para calificar el desempeño
+def calificar_desempeno(valores_norm, rol):
+    dmg, rec, oro, part = valores_norm[:4]
+    calificacion = ""
+    mensaje = ""
+    
+    if rol == "TOPLANER":
+        if dmg < 60:
+            mensaje = "Necesita mejorar el daño infligido."
+            calificacion = "Bajo"
+        elif dmg > 90:
+            mensaje = "Excelente daño infligido."
+            calificacion = "Excelente"
+        
+        if oro < 50:
+            mensaje += " Necesita mejorar la economía."
+            calificacion = "Bajo"
+        
+        if part < 50:
+            mensaje += " Participación en peleas baja."
+            calificacion = "Bajo"
+    
+    elif rol == "JUNGLER":
+        if oro < 60:
+            mensaje = "La economía podría mejorar."
+            calificacion = "Promedio"
+        
+        if rec > 70:
+            mensaje += " Daño recibido alto."
+            calificacion = "Bajo"
+        
+        if part < 40:
+            mensaje += " Participación en peleas baja."
+            calificacion = "Bajo"
+    
+    elif rol == "MIDLANER":
+        if dmg < 70:
+            mensaje = "Daño infligido bajo."
+            calificacion = "Bajo"
+        
+        if oro < 60:
+            mensaje += " Economía por debajo del promedio."
+            calificacion = "Promedio"
+        
+        if part < 50:
+            mensaje += " Necesita participar más."
+            calificacion = "Bajo"
+    
+    elif rol == "ADCARRY":
+        if dmg < 80:
+            mensaje = "Daño infligido bajo."
+            calificacion = "Bajo"
+        
+        if rec > 60:
+            mensaje += " Daño recibido alto."
+            calificacion = "Bajo"
+    
+    elif rol == "SUPPORT":
+        if oro < 30:
+            mensaje = "Economía muy baja, aunque es normal para un support."
+            calificacion = "Promedio"
+        
+        if part > 70:
+            mensaje = "Excelente participación en peleas."
+            calificacion = "Excelente"
+    
+    # Añadir comentarios si la calificación es baja
+    if calificacion == "Bajo":
+        mensaje = f"Desempeño bajo. Requiere mejorar: {mensaje}"
+    elif calificacion == "Promedio":
+        mensaje = f"Desempeño promedio. Se recomienda mejorar: {mensaje}"
+    elif calificacion == "Excelente":
+        mensaje = f"Desempeño excelente. Buen trabajo: {mensaje}"
+    
+    return mensaje, calificacion
+
 # Configuración de la página
 st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide")
 st.title("Honor of Kings - Registro Diario de Partidas y Análisis por Línea")
@@ -67,64 +143,6 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
         plt.savefig(buf, format='png', bbox_inches='tight')
         buf.seek(0)
         return buf
-
-    def generar_feedback(valores_norm, rol):
-        dmg, rec, oro, part = valores_norm[:4]
-        fb = []
-
-        if rol == "TOPLANER":
-            if dmg < 60:
-                fb.append("El daño infligido está por debajo de lo esperado para un toplaner.")
-            if oro < 50:
-                fb.append("La economía está por debajo de lo esperado para un toplaner.")
-            if part < 50:
-                fb.append("Considera mejorar tu participación en las peleas.")
-        
-        elif rol == "JUNGLER":
-            if oro < 60:
-                fb.append("La economía podría mejorar, especialmente si no estás tomando objetivos.")
-            if rec > 70:
-                fb.append("Exceso de daño recibido. Intenta ser más eficiente con los ganks.")
-            if part < 40:
-                fb.append("Deberías participar más en las peleas del equipo.")
-        
-        elif rol == "MIDLANER":
-            if dmg < 70:
-                fb.append("El daño infligido es bajo, intenta conseguir más farm.")
-            if oro < 60:
-                fb.append("Economía en la media, pero debería estar más alta para un midlaner.")
-            if part < 50:
-                fb.append("La participación en peleas podría mejorar.")
-        
-        elif rol == "ADCARRY":
-            if dmg < 80:
-                fb.append("El daño infligido está por debajo del estándar para un ADC.")
-            if rec > 60:
-                fb.append("Considera mejorar la posición para evitar recibir mucho daño.")
-        
-        elif rol == "SUPPORT":
-            if oro < 30:
-                fb.append("El oro total está muy bajo, lo cual es normal para un support, pero debes considerar más visión o un ítem clave.")
-            if part > 70:
-                fb.append("Excelente participación en las peleas.")
-
-        if dmg > 80:
-            fb.append("Daño infligido sobresaliente.")
-        elif dmg < 40:
-            fb.append("Daño infligido bajo.")
-        if rec < 40:
-            fb.append("Buena gestión del daño recibido.")
-        elif rec > 80:
-            fb.append("Exceso de daño recibido.")
-        if oro > 70:
-            fb.append("Economía sólida.")
-        elif oro < 30:
-            fb.append("Economía baja.")
-        if part > 70:
-            fb.append("Participación destacada.")
-        elif part < 30:
-            fb.append("Participación baja.")
-        return " • ".join(fb)
 
     # Formulario de registro de partidas
     st.header("Registrar Nueva Partida")
@@ -211,9 +229,10 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
             html_contenido += f"<h4>Gráfico de Desempeño</h4>"
             html_contenido += f"<img src='data:image/png;base64,{grafico_base64}' width='500'/>"
 
-            # Retroalimentación
+            # Retroalimentación y calificación
             valores_norm = [promedio["Daño Infligido"], promedio["Daño Recibido"], promedio["Oro Total"], promedio["Participación"]]
-            feedback = generar_feedback(valores_norm, rol)
+            feedback, calificacion = calificar_desempeno(valores_norm, rol)
+            html_contenido += f"<h4>Calificación: {calificacion}</h4>"
             html_contenido += f"<h4>Retroalimentación:</h4><p>{feedback}</p>"
 
         # Botón para descargar el informe como HTML
