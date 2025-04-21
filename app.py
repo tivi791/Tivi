@@ -7,7 +7,7 @@ import pandas as pd
 from datetime import datetime
 
 # Lista de usuarios permitidos (usuario: contraseña)
-usuarios_permitidos = {"usuario1": "clave1", "usuario2": "clave2", "usuario3": "clave3"}
+usuarios_permitidos = {"Tivi": "2107", "": "clave2", "usuario3": "clave3"}
 
 # Función de autenticación
 def autenticar_usuario(usuario, clave):
