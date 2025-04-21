@@ -68,26 +68,112 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
         buf.seek(0)
         return buf
 
-    def generar_feedback(valores_norm):
-        dmg, rec, oro, part = valores_norm[:4]
-        fb = []
-        if dmg > 80:
-            fb.append("Daño infligido sobresaliente.")
-        elif dmg < 40:
-            fb.append("Daño infligido bajo.")
-        if rec < 40:
-            fb.append("Buena gestión del daño recibido.")
-        elif rec > 80:
-            fb.append("Exceso de daño recibido.")
-        if oro > 70:
-            fb.append("Economía sólida.")
-        elif oro < 30:
-            fb.append("Economía baja.")
-        if part > 70:
-            fb.append("Participación destacada.")
-        elif part < 30:
-            fb.append("Participación baja.")
-        return " • ".join(fb)
+    def generar_feedback_por_rol(rol, valores_norm):
+    dmg, rec, oro, part = valores_norm[:4]
+    fb = []
+
+    if rol == "TOPLANER":
+        # Toplaner feedback
+        if dmg < 50:
+            fb.append("Daño infligido bajo. Asegúrate de aprovechar las oportunidades para hostigar al enemigo y aplicar presión en la línea.")
+        elif dmg > 80:
+            fb.append("Excelente daño infligido. Eres una fuente de presión importante en la línea.")
+        
+        if rec > 60:
+            fb.append("Recibes mucho daño. Considera mejorar tu posicionamiento y buscar más apoyo de tu jungler.")
+        elif rec < 40:
+            fb.append("Buen manejo del daño recibido. Estás posicionándote bien para evitar ataques enemigos.")
+        
+        if oro < 60:
+            fb.append("Tu oro es bajo. Necesitas mejorar el farmeo y buscar más oportunidades para obtener recursos.")
+        elif oro > 80:
+            fb.append("Buen control del oro. Estás maximizando tus recursos y lo que necesitas para tu construcción.")
+        
+        if part < 50:
+            fb.append("Tu participación es baja. Necesitas estar más involucrado en las peleas y en los objetivos del equipo.")
+        elif part > 70:
+            fb.append("Excelente participación. Estás impactando las peleas de equipo y contribuyendo a los objetivos.")
+    
+    elif rol == "JUNGLER":
+        # Jungler feedback
+        if dmg < 60:
+            fb.append("Daño infligido bajo. Considera mejorar tus rutas de jungla y buscar ganks más efectivos.")
+        elif dmg > 80:
+            fb.append("Buen daño infligido. Estás contribuyendo de manera significativa a las peleas y el control del mapa.")
+        
+        if rec > 60:
+            fb.append("Excesivo daño recibido. Asegúrate de tener visión y evitar entrar en situaciones comprometidas sin el control adecuado.")
+        
+        if oro < 70:
+            fb.append("Oro bajo. Aprovecha más los campamentos de la jungla y participa en los objetivos del mapa.")
+        elif oro > 80:
+            fb.append("Buen control de la jungla. Estás maximizando los recursos y participando bien en las rotaciones.")
+        
+        if part < 60:
+            fb.append("Tu participación es baja. Como jungler, es esencial que estés presente en los momentos clave del juego.")
+        elif part > 80:
+            fb.append("Excelente participación. Estás impactando el mapa y asegurando los objetivos correctamente.")
+    
+    elif rol == "MIDLANER":
+        # Midlane feedback
+        if dmg < 60:
+            fb.append("Tu daño infligido es bajo. Necesitas ser más agresivo y aprovechar las oportunidades para impactar las peleas.")
+        elif dmg > 80:
+            fb.append("Excelente daño infligido. Estás dominando tu rol y haciendo una gran presión en las peleas.")
+        
+        if rec > 50:
+            fb.append("Daño recibido elevado. Asegúrate de tener control sobre tus rotaciones y posicionarte mejor.")
+        
+        if oro < 70:
+            fb.append("Tu oro es bajo. Necesitas mejorar en el control de oleadas y en la gestión de tus recursos.")
+        elif oro > 80:
+            fb.append("Buen manejo del oro. Estás obteniendo recursos eficientemente para escalar en el juego.")
+        
+        if part < 60:
+            fb.append("Tu participación es baja. Necesitas moverte por el mapa y participar más en las rotaciones.")
+        elif part > 80:
+            fb.append("Excelente participación. Tu control del mapa y tu impacto en peleas clave son notables.")
+    
+    elif rol == "ADCARRY":
+        # ADC feedback
+        if dmg < 60:
+            fb.append("Daño infligido bajo. Como ADC, necesitas maximizar tu daño, especialmente en las peleas de equipo.")
+        elif dmg > 80:
+            fb.append("Excelente daño infligido. Estás siendo una gran fuente de daño en el juego tardío.")
+        
+        if rec > 50:
+            fb.append("Recibes mucho daño. Es crucial que confíes en tu soporte y tengas un posicionamiento seguro.")
+        
+        if oro < 80:
+            fb.append("Oro bajo. Necesitas mejorar en el farmeo y buscar más oportunidades para obtener recursos.")
+        elif oro > 90:
+            fb.append("Excelente control de oro. Estás maximizando tus recursos para llegar al final de la partida más fuerte.")
+        
+        if part < 50:
+            fb.append("Tu participación es baja. Como ADC, deberías estar más involucrado en las peleas de equipo.")
+        elif part > 70:
+            fb.append("Excelente participación. Estás maximizando tu impacto en las peleas y contribuyendo al equipo.")
+    
+    elif rol == "SUPPORT":
+        # Support feedback
+        if dmg > 40:
+            fb.append("Buen daño infligido para un soporte, pero recuerda que tu objetivo principal es proteger y asistir.")
+        
+        if rec > 50:
+            fb.append("Recibes mucho daño. Asegúrate de mantenerte en una posición segura para proteger a tu ADC.")
+        
+        if oro < 60:
+            fb.append("Oro bajo. Considera invertir más tiempo en ayudar a tu equipo y mejorar tu visión del mapa.")
+        elif oro > 70:
+            fb.append("Buen manejo del oro. Estás ayudando a tu equipo a obtener control de visión y objetos clave.")
+        
+        if part < 60:
+            fb.append("Tu participación es baja. Como soporte, es fundamental que estés involucrado en las peleas y en el control de visión.")
+        elif part > 80:
+            fb.append("Excelente participación. Estás siendo un gran soporte en las peleas y ayudando a tu equipo con la visión.")
+    
+    return " • ".join(fb)
+)
 
     # Formulario de registro de partidas
     st.header("Registrar Nueva Partida")
