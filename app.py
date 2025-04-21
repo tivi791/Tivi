@@ -10,84 +10,81 @@ usuarios_permitidos = {"Tivi": "2107", "Ghost": "203", "usuario3": "clave3"}
 
 # Función de autenticación
 def autenticar_usuario(usuario, clave):
-    if usuario in usuarios_permitidos and usuarios_permitidos[usuario] == clave:
-        return True
-    return False
+    return usuarios_permitidos.get(usuario) == clave
 
 # Función para calificar el desempeño
+
 def calificar_desempeno(valores_norm, rol, maximos):
     dmg, rec, oro, part = valores_norm[:4]
     calificacion = ""
     mensaje = ""
 
-    # Calificación Relativa por Rol
+    # Percentiles por rol
     percentil_dmg = (dmg / maximos['Daño Infligido']) * 100 if maximos['Daño Infligido'] != 0 else 0
     percentil_rec = (rec / maximos['Daño Recibido']) * 100 if maximos['Daño Recibido'] != 0 else 0
     percentil_oro = (oro / maximos['Oro Total']) * 100 if maximos['Oro Total'] != 0 else 0
     percentil_part = (part / maximos['Participación']) * 100 if maximos['Participación'] != 0 else 0
 
-    # Ajuste de las reglas de calificación por rol
     if rol == "TOPLANER":
-        if dmg < 60:
+        if percentil_dmg < 60:
             mensaje = "Necesita mejorar el daño infligido."
             calificacion = "Bajo"
-        elif dmg > 90:
+        elif percentil_dmg > 90:
             mensaje = "Excelente daño infligido."
             calificacion = "Excelente"
 
-        if oro < 50:
+        if percentil_oro < 50:
             mensaje += " Necesita mejorar la economía."
             calificacion = "Bajo"
 
-        if part < 50:
+        if percentil_part < 50:
             mensaje += " Participación en peleas baja."
             calificacion = "Bajo"
 
     elif rol == "JUNGLER":
-        if oro < 60:
+        if percentil_oro < 60:
             mensaje = "La economía podría mejorar."
             calificacion = "Promedio"
 
-        if rec > 70:
+        if percentil_rec > 70:
             mensaje += " Daño recibido alto."
             calificacion = "Bajo"
 
-        if part < 40:
+        if percentil_part < 40:
             mensaje += " Participación en peleas baja."
             calificacion = "Bajo"
 
     elif rol == "MIDLANER":
-        if dmg < 70:
+        if percentil_dmg < 70:
             mensaje = "Daño infligido bajo."
             calificacion = "Bajo"
 
-        if oro < 60:
+        if percentil_oro < 60:
             mensaje += " Economía por debajo del promedio."
             calificacion = "Promedio"
 
-        if part < 50:
+        if percentil_part < 50:
             mensaje += " Necesita participar más."
             calificacion = "Bajo"
 
     elif rol == "ADCARRY":
-        if dmg < 80:
+        if percentil_dmg < 80:
             mensaje = "Daño infligido bajo."
             calificacion = "Bajo"
 
-        if rec > 60:
+        if percentil_rec > 60:
             mensaje += " Daño recibido alto."
             calificacion = "Bajo"
 
     elif rol == "SUPPORT":
-        if oro < 30:
+        if percentil_oro < 30:
             mensaje = "Economía muy baja, aunque es normal para un support."
             calificacion = "Promedio"
 
-        if part > 70:
+        if percentil_part > 70:
             mensaje = "Excelente participación en peleas."
             calificacion = "Excelente"
 
-    # Calificación Final
     if calificacion == "Bajo":
         mensaje = f"Desempeño bajo. Requiere mejorar: {mensaje}"
     elif calificacion == "Promedio":
@@ -229,7 +226,6 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
                 html_contenido += f"<p><strong>Calificación: {calificacion}</strong></p>"
                 html_contenido += f"<p><strong>Retroalimentación:</strong> {mensaje}</p>"
 
-        # Agregar botón de descarga HTML
         st.markdown(html_contenido, unsafe_allow_html=True)
 else:
     st.sidebar.warning("Por favor, inicia sesión para ver los registros.")
