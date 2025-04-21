@@ -227,5 +227,11 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
                 html_contenido += f"<p><strong>Retroalimentación:</strong> {mensaje}</p>"
 
         st.markdown(html_contenido, unsafe_allow_html=True)
+# Crear archivo HTML descargable
+html_bytes = html_contenido.encode("utf-8")
+b64 = base64.b64encode(html_bytes).decode()
+fecha_str = datetime.now().strftime("%Y-%m-%d")
+href = f'<a href="data:text/html;base64,{b64}" download="resumen_{fecha_str}.html" target="_blank">📥 Descargar resumen en HTML</a>'
+st.markdown(href, unsafe_allow_html=True)
 else:
     st.sidebar.warning("Por favor, inicia sesión para ver los registros.")
