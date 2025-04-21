@@ -221,4 +221,10 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
                 html_contenido += f"<p><strong>Calificación: {calificacion}</strong></p>"
                 html_contenido += f"<p><strong>Retroalimentación:</strong> {mensaje}</p>"
 
-        st.markdown(html_contenido, unsafe_allow_html=True)
+        # Botón para descargar el archivo HTML
+        st.download_button(
+            label="Descargar Resumen en HTML",
+            data=html_contenido,
+            file_name=f"resumen_{fecha_actual}.html",
+            mime="text/html"
+        )
