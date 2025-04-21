@@ -4,87 +4,91 @@ from math import pi
 import io
 import base64
 from datetime import datetime
+import os
 
 # Lista de usuarios permitidos (usuario: contraseña)
 usuarios_permitidos = {"Tivi": "2107", "Ghost": "203", "usuario3": "clave3"}
 
 # Función de autenticación
 def autenticar_usuario(usuario, clave):
-    return usuarios_permitidos.get(usuario) == clave
+    if usuario in usuarios_permitidos and usuarios_permitidos[usuario] == clave:
+        return True
+    return False
 
 # Función para calificar el desempeño
-
 def calificar_desempeno(valores_norm, rol, maximos):
     dmg, rec, oro, part = valores_norm[:4]
     calificacion = ""
     mensaje = ""
 
-    # Percentiles por rol
+    # Calificación Relativa por Rol
     percentil_dmg = (dmg / maximos['Daño Infligido']) * 100 if maximos['Daño Infligido'] != 0 else 0
     percentil_rec = (rec / maximos['Daño Recibido']) * 100 if maximos['Daño Recibido'] != 0 else 0
     percentil_oro = (oro / maximos['Oro Total']) * 100 if maximos['Oro Total'] != 0 else 0
     percentil_part = (part / maximos['Participación']) * 100 if maximos['Participación'] != 0 else 0
 
+    # Ajuste de las reglas de calificación por rol
     if rol == "TOPLANER":
-        if percentil_dmg < 60:
+        if dmg < 60:
             mensaje = "Necesita mejorar el daño infligido."
             calificacion = "Bajo"
-        elif percentil_dmg > 90:
+        elif dmg > 90:
             mensaje = "Excelente daño infligido."
             calificacion = "Excelente"
 
-        if percentil_oro < 50:
+        if oro < 50:
             mensaje += " Necesita mejorar la economía."
             calificacion = "Bajo"
 
-        if percentil_part < 50:
+        if part < 50:
             mensaje += " Participación en peleas baja."
             calificacion = "Bajo"
 
     elif rol == "JUNGLER":
-        if percentil_oro < 60:
+        if oro < 60:
             mensaje = "La economía podría mejorar."
             calificacion = "Promedio"
 
-        if percentil_rec > 70:
+        if rec > 70:
             mensaje += " Daño recibido alto."
             calificacion = "Bajo"
 
-        if percentil_part < 40:
+        if part < 40:
             mensaje += " Participación en peleas baja."
             calificacion = "Bajo"
 
     elif rol == "MIDLANER":
-        if percentil_dmg < 70:
+        if dmg < 70:
             mensaje = "Daño infligido bajo."
             calificacion = "Bajo"
 
-        if percentil_oro < 60:
+        if oro < 60:
             mensaje += " Economía por debajo del promedio."
             calificacion = "Promedio"
 
-        if percentil_part < 50:
+        if part < 50:
             mensaje += " Necesita participar más."
             calificacion = "Bajo"
 
     elif rol == "ADCARRY":
-        if percentil_dmg < 80:
+        if dmg < 80:
             mensaje = "Daño infligido bajo."
             calificacion = "Bajo"
 
-        if percentil_rec > 60:
+        if rec > 60:
             mensaje += " Daño recibido alto."
             calificacion = "Bajo"
 
     elif rol == "SUPPORT":
-        if percentil_oro < 30:
+        if oro < 30:
             mensaje = "Economía muy baja, aunque es normal para un support."
             calificacion = "Promedio"
 
-        if percentil_part > 70:
+        if part > 70:
             mensaje = "Excelente participación en peleas."
             calificacion = "Excelente"
 
+    # Calificación Final
     if calificacion == "Bajo":
         mensaje = f"Desempeño bajo. Requiere mejorar: {mensaje}"
     elif calificacion == "Promedio":
@@ -226,15 +230,17 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
                 html_contenido += f"<p><strong>Calificación: {calificacion}</strong></p>"
                 html_contenido += f"<p><strong>Retroalimentación:</strong> {mensaje}</p>"
 
-           # Mostrar resumen en Streamlit
-    st.markdown(html_contenido, unsafe_allow_html=True)
+        # Agregar botón de descarga HTML
+        html_file = os.path.join("summary.html")
+        with open(html_file, 'w') as file:
+            file.write(html_contenido)
 
-    # Crear botón de descarga del HTML
-    html_bytes = html_contenido.encode("utf-8")
-    b64 = base64.b64encode(html_bytes).decode()
-    fecha_str = datetime.now().strftime("%Y-%m-%d")
-    href = f'<a href="data:text/html;base64,{b64}" download="resumen_{fecha_str}.html" target="_blank">📥 Descargar resumen en HTML</a>'
-    st.markdown(href, unsafe_allow_html=True)
-
+        with open(html_file, 'rb') as f:
+            st.download_button(
+                label="Descargar Resumen como HTML",
+                data=f,
+                file_name="resumen_partidas_hoy.html",
+                mime="text/html"
+            )
 else:
     st.sidebar.warning("Por favor, inicia sesión para ver los registros.")
