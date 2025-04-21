@@ -7,7 +7,7 @@ import pandas as pd
 from datetime import datetime
 
 # Lista de usuarios permitidos (usuario: contraseña)
-usuarios_permitidos = {"Tivi": "2107", "Ghost": "203", "usuario3": "clave3"} 
+usuarios_permitidos = {"Tivi": "2107", "Ghost": "203", "usuario3": "clave3"}
 
 # Función de autenticación
 def autenticar_usuario(usuario, clave):
@@ -68,9 +68,46 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
         buf.seek(0)
         return buf
 
-    def generar_feedback(valores_norm):
+    def generar_feedback(valores_norm, rol):
         dmg, rec, oro, part = valores_norm[:4]
         fb = []
+
+        if rol == "TOPLANER":
+            if dmg < 60:
+                fb.append("El daño infligido está por debajo de lo esperado para un toplaner.")
+            if oro < 50:
+                fb.append("La economía está por debajo de lo esperado para un toplaner.")
+            if part < 50:
+                fb.append("Considera mejorar tu participación en las peleas.")
+        
+        elif rol == "JUNGLER":
+            if oro < 60:
+                fb.append("La economía podría mejorar, especialmente si no estás tomando objetivos.")
+            if rec > 70:
+                fb.append("Exceso de daño recibido. Intenta ser más eficiente con los ganks.")
+            if part < 40:
+                fb.append("Deberías participar más en las peleas del equipo.")
+        
+        elif rol == "MIDLANER":
+            if dmg < 70:
+                fb.append("El daño infligido es bajo, intenta conseguir más farm.")
+            if oro < 60:
+                fb.append("Economía en la media, pero debería estar más alta para un midlaner.")
+            if part < 50:
+                fb.append("La participación en peleas podría mejorar.")
+        
+        elif rol == "ADCARRY":
+            if dmg < 80:
+                fb.append("El daño infligido está por debajo del estándar para un ADC.")
+            if rec > 60:
+                fb.append("Considera mejorar la posición para evitar recibir mucho daño.")
+        
+        elif rol == "SUPPORT":
+            if oro < 30:
+                fb.append("El oro total está muy bajo, lo cual es normal para un support, pero debes considerar más visión o un ítem clave.")
+            if part > 70:
+                fb.append("Excelente participación en las peleas.")
+
         if dmg > 80:
             fb.append("Daño infligido sobresaliente.")
         elif dmg < 40:
@@ -158,34 +195,24 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
 
             # Agregar el gráfico
             categorias = list(promedio.keys())
-            grafico_buf = generar_grafico(promedio, f"Promedio del día - {rol}", categorias, maximos)
-            grafico_base64 = base64.b64encode(grafico_buf.read()).decode('utf-8')
+            grafico_buf = generar_grafico(promedio, f"Promedio {rol}", categorias, maximos)
 
-            # Agregar la información y el gráfico
+            # Incluir el gráfico en el informe HTML
             html_contenido += f"<h3>{rol}</h3>"
-            html_contenido += f"<p><b>Datos:</b></p>"
-            html_contenido += f"<ul>"
-            for k, v in promedio.items():
-                html_contenido += f"<li><b>{k}:</b> {v:.2f}</li>"
-            html_contenido += f"</ul>"
-            html_contenido += f"<img src='data:image/png;base64,{grafico_base64}' width='500'/>"
-            html_contenido += f"<p><b>Análisis:</b> {generar_feedback(maximos_individuales)}</p>"
+            html_contenido += f"<h4>Promedio de estadísticas</h4>"
+            html_contenido += f"<p>Daño Infligido Promedio: {promedio['Daño Infligido']}</p>"
+            html_contenido += f"<p>Daño Recibido Promedio: {promedio['Daño Recibido']}</p>"
+            html_contenido += f"<p>Oro Total Promedio: {promedio['Oro Total']}</p>"
+            html_contenido += f"<p>Participación Promedio: {promedio['Participación']}</p>"
 
-        # Mostrar resumen general al final
-        html_contenido += "<h3>Resumen General de todas las partidas jugadas:</h3>"
-        html_contenido += "<ul>"
-        for item in resumen_general:
-            html_contenido += f"<li>{item}</li>"
-        html_contenido += "</ul>"
+            # Mostrar gráfico
+            grafico_base64 = base64.b64encode(grafico_buf.read()).decode('utf-8')
+            html_contenido += f"<h4>Gráfico de Desempeño</h4>"
+            html_contenido += f"<img src='data:image/png;base64,{grafico_base64}' width='500'/>"
+
+            # Retroalimentación
+            valores_norm = [promedio["Daño Infligido"], promedio["Daño Recibido"], promedio["Oro Total"], promedio["Participación"]]
+            feedback = generar_feedback(valores_norm, rol)
+            html_contenido += f"<h4>Retroalimentación:</h4><p>{feedback}</p>"
 
         st.markdown(html_contenido, unsafe_allow_html=True)
-
-        # Opción para descargar el informe en formato HTML
-        st.download_button(
-            label="Descargar Informe en HTML",
-            data=html_contenido,
-            file_name="informe_honor_of_kings.html",
-            mime="text/html"
-        )
-else:
-    st.info("Por favor, inicia sesión para acceder al registro de partidas.")
