@@ -91,14 +91,14 @@ def calificar_desempeno(valores_norm, rol):
 
 # Configuración de la página
 st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide")
-st.markdown(""" 
-    <style> 
-        body { background-color: #0a0a0a; color: white; } 
-        h1, h2, h3, h4, h5, h6 { color: #FFD700; font-family: 'Roboto', sans-serif; } 
-        .stButton>button { background-color: #FFD700; color: black; font-weight: bold; border-radius: 8px; } 
-        .stTextInput>div>div>input { background-color: #1e1e1e; color: white; } 
-        .stNumberInput>div>div>input { background-color: #1e1e1e; color: white; } 
-    </style> 
+st.markdown("""
+    <style>
+        body { background-color: #0a0a0a; color: white; }
+        h1, h2, h3, h4, h5, h6 { color: #FFD700; font-family: 'Roboto', sans-serif; }
+        .stButton>button { background-color: #FFD700; color: black; font-weight: bold; border-radius: 8px; }
+        .stTextInput>div>div>input { background-color: #1e1e1e; color: white; }
+        .stNumberInput>div>div>input { background-color: #1e1e1e; color: white; }
+    </style>
 """, unsafe_allow_html=True)
 
 st.title("🏆 WOLF SEEKERS E-SPORTS (LAS) - Registro Diario de Partidas")
@@ -221,4 +221,10 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
                 html_contenido += f"<p><strong>Calificación: {calificacion}</strong></p>"
                 html_contenido += f"<p><strong>Retroalimentación:</strong> {mensaje}</p>"
 
-        st.markdown(html_contenido, unsafe_allow_html=True)
+        # Agregar botón de descarga
+        st.download_button(
+            label="Descargar Resumen en HTML",
+            data=html_contenido,
+            file_name=f"resumen_partidas_{fecha_actual}.html",
+            mime="text/html"
+        )
