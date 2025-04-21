@@ -210,6 +210,3 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
         )
 else:
     st.info("Por favor, inicia sesión para acceder al registro de partidas.")
-
-debajo de los grafis aparece algo asi
-Análisis: Daño infligido bajo. • Buena gestión del daño recibido. • Economía baja. • Participación baja.
