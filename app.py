@@ -5,7 +5,6 @@ import io
 import base64
 import pandas as pd
 from datetime import datetime
-from fpdf import FPDF
 
 # Lista de usuarios permitidos (usuario: contraseña)
 usuarios_permitidos = {"Tivi": "2107", "Ghost": "203", "usuario3": "clave3"}
@@ -217,20 +216,12 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
             feedback = generar_feedback(valores_norm, rol)
             html_contenido += f"<h4>Retroalimentación:</h4><p>{feedback}</p>"
 
-        # Función para descargar como PDF
-        def crear_pdf(contenido):
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", size=12)
-            pdf.multi_cell(0, 10, contenido)
-            return pdf
-
-        # Botón de descarga
-        if st.button("Descargar Informe Diario"):
-            pdf = crear_pdf(html_contenido)
-            pdf_output = io.BytesIO()
-            pdf.output(pdf_output)
-            pdf_output.seek(0)
-            st.download_button("Descargar PDF", pdf_output, file_name="informe_diario.pdf", mime="application/pdf")
+        # Botón para descargar el informe como HTML
+        st.download_button(
+            label="Descargar Informe Diario (HTML)",
+            data=html_contenido,
+            file_name=f"informe_diario_{fecha_actual}.html",
+            mime="text/html"
+        )
 
         st.markdown(html_contenido, unsafe_allow_html=True)
