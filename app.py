@@ -16,13 +16,13 @@ def autenticar_usuario(usuario, clave):
     return False
 
 # Configuración de la página
-st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide")
-st.title("Honor of Kings - Registro Diario de Partidas y Análisis por Línea")
+st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide", page_icon="🛡️")
+st.markdown("<h1 style='text-align: center; color: #007ACC;'>Honor of Kings - Registro Diario de Partidas y Análisis por Línea</h1>", unsafe_allow_html=True)
 
 # Formulario de inicio de sesión
 st.sidebar.header("Iniciar sesión")
-usuario_ingresado = st.sidebar.text_input("Usuario")
-clave_ingresada = st.sidebar.text_input("Contraseña", type="password")
+usuario_ingresado = st.sidebar.text_input("Usuario", placeholder="Ingresa tu nombre de usuario")
+clave_ingresada = st.sidebar.text_input("Contraseña", type="password", placeholder="Ingresa tu contraseña")
 
 # Botón de inicio de sesión
 if st.sidebar.button("Iniciar sesión"):
@@ -127,12 +127,12 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
         return " • ".join(fb)
 
     # Formulario de registro de partidas
-    st.header("Registrar Nueva Partida")
+    st.header("Registrar Nueva Partida", anchor="registro")
     jugadores = []
 
     with st.form("registro_form"):
         for i, rol in enumerate(roles):
-            st.subheader(f"{rol}")
+            st.subheader(f"**{rol}**")
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 dmg = st.number_input(f"Daño Infligido ({rol})", min_value=0, key=f"dmg_{i}")
@@ -158,7 +158,7 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
             st.success("Partida guardada correctamente.")
 
     # Mostrar partidas guardadas
-    st.subheader("Partidas Registradas Hoy")
+    st.subheader("Partidas Registradas Hoy", anchor="partidas")
     fecha_actual = datetime.now().strftime("%Y-%m-%d")
     partidas_hoy = [p for p in st.session_state.registro_partidas if p["fecha"] == fecha_actual]
     st.write(f"Total de partidas hoy: {len(partidas_hoy)}")
@@ -184,8 +184,8 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
         promedios_totales = {k: v / (total_partidas * len(roles)) for k, v in promedios_totales.items()}
 
         # Generar informe en HTML
-        html_contenido = f"<h2>Resumen Diario - {fecha_actual}</h2>"
-        html_contenido += f"<p>Total de partidas hoy: {len(partidas_hoy)}</p>"
+        html_contenido = f"<h2 style='text-align: center; color: #333;'>Resumen Diario - {fecha_actual}</h2>"
+        html_contenido += f"<p style='text-align: center;'>Total de partidas hoy: {len(partidas_hoy)}</p>"
 
         # Resumen general de todas las partidas
         for rol in roles:
