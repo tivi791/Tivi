@@ -5,6 +5,7 @@ import io
 import base64
 import pandas as pd
 from datetime import datetime
+from fpdf import FPDF
 
 # Lista de usuarios permitidos (usuario: contraseña)
 usuarios_permitidos = {"Tivi": "2107", "Ghost": "203", "usuario3": "clave3"}
@@ -16,13 +17,13 @@ def autenticar_usuario(usuario, clave):
     return False
 
 # Configuración de la página
-st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide", page_icon="🛡️")
-st.markdown("<h1 style='text-align: center; color: #007ACC;'>Honor of Kings - Registro Diario de Partidas y Análisis por Línea</h1>", unsafe_allow_html=True)
+st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide")
+st.title("Honor of Kings - Registro Diario de Partidas y Análisis por Línea")
 
 # Formulario de inicio de sesión
 st.sidebar.header("Iniciar sesión")
-usuario_ingresado = st.sidebar.text_input("Usuario", placeholder="Ingresa tu nombre de usuario")
-clave_ingresada = st.sidebar.text_input("Contraseña", type="password", placeholder="Ingresa tu contraseña")
+usuario_ingresado = st.sidebar.text_input("Usuario")
+clave_ingresada = st.sidebar.text_input("Contraseña", type="password")
 
 # Botón de inicio de sesión
 if st.sidebar.button("Iniciar sesión"):
@@ -127,12 +128,12 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
         return " • ".join(fb)
 
     # Formulario de registro de partidas
-    st.header("Registrar Nueva Partida", anchor="registro")
+    st.header("Registrar Nueva Partida")
     jugadores = []
 
     with st.form("registro_form"):
         for i, rol in enumerate(roles):
-            st.subheader(f"**{rol}**")
+            st.subheader(f"{rol}")
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 dmg = st.number_input(f"Daño Infligido ({rol})", min_value=0, key=f"dmg_{i}")
@@ -158,7 +159,7 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
             st.success("Partida guardada correctamente.")
 
     # Mostrar partidas guardadas
-    st.subheader("Partidas Registradas Hoy", anchor="partidas")
+    st.subheader("Partidas Registradas Hoy")
     fecha_actual = datetime.now().strftime("%Y-%m-%d")
     partidas_hoy = [p for p in st.session_state.registro_partidas if p["fecha"] == fecha_actual]
     st.write(f"Total de partidas hoy: {len(partidas_hoy)}")
@@ -184,8 +185,9 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
         promedios_totales = {k: v / (total_partidas * len(roles)) for k, v in promedios_totales.items()}
 
         # Generar informe en HTML
-        html_contenido = f"<h2 style='text-align: center; color: #333;'>Resumen Diario - {fecha_actual}</h2>"
-        html_contenido += f"<p style='text-align: center;'>Total de partidas hoy: {len(partidas_hoy)}</p>"
+        html_contenido = f"<h2>Resumen Diario - {fecha_actual}</h2>"
+        html_contenido += f"<p>Total de partidas hoy: {len(partidas_hoy)}</p>"
+        html_contenido += f"<p>Equipo: WOLF SEEKERS E-SPORTS (LAS)</p>"
 
         # Resumen general de todas las partidas
         for rol in roles:
@@ -214,5 +216,21 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
             valores_norm = [promedio["Daño Infligido"], promedio["Daño Recibido"], promedio["Oro Total"], promedio["Participación"]]
             feedback = generar_feedback(valores_norm, rol)
             html_contenido += f"<h4>Retroalimentación:</h4><p>{feedback}</p>"
+
+        # Función para descargar como PDF
+        def crear_pdf(contenido):
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=12)
+            pdf.multi_cell(0, 10, contenido)
+            return pdf
+
+        # Botón de descarga
+        if st.button("Descargar Informe Diario"):
+            pdf = crear_pdf(html_contenido)
+            pdf_output = io.BytesIO()
+            pdf.output(pdf_output)
+            pdf_output.seek(0)
+            st.download_button("Descargar PDF", pdf_output, file_name="informe_diario.pdf", mime="application/pdf")
 
         st.markdown(html_contenido, unsafe_allow_html=True)
