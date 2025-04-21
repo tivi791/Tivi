@@ -10,6 +10,24 @@ from datetime import datetime
 st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide")
 st.title("Honor of Kings - Registro Diario de Partidas y Análisis por Línea")
 
+# Función para pedir la contraseña
+def mostrar_login():
+    st.subheader("Ingresa la contraseña para continuar")
+    password = st.text_input("Contraseña", type="password")
+    if password == "2107":  # Reemplaza con la contraseña que elijas
+        st.session_state.autenticado = True
+        st.success("¡Contraseña correcta! Acceso permitido.")
+        return True
+    elif password:
+        st.error("Contraseña incorrecta. Intenta nuevamente.")
+    return False
+
+# Verifica si el usuario está autenticado
+if "autenticado" not in st.session_state or not st.session_state.autenticado:
+    if not mostrar_login():
+        st.stop()  # Detiene la ejecución hasta que la contraseña sea correcta
+
+# Si la contraseña es correcta, ejecuta la aplicación
 roles = ["TOPLANER", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
 
 # Verifica si ya existe el estado de sesión para las partidas, si no lo inicializa
