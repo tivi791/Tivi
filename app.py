@@ -165,10 +165,10 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
     st.write(f"Total de partidas hoy: {len(partidas_hoy)}")
 
     if partidas_hoy:
+        # Acumulación de estadísticas
         acumulado = {rol: {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0} for rol in roles}
         resumen_general = []
         maximos = {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0}
-        promedios_totales = {"Daño Infligido": 0, "Daño Recibido": 0, "Oro Total": 0, "Participación": 0}
 
         for partida in partidas_hoy:
             for i, datos in enumerate(partida["datos"]):
@@ -178,18 +178,20 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
                         maximos[k] = datos[k]
 
         # Calcular los promedios
+        promedios_totales = {}
         for rol in roles:
+            promedios_totales[rol] = {}
             for k in acumulado[rol]:
-                promedios_totales[k] = acumulado[rol][k] / len(partidas_hoy)
+                promedios_totales[rol][k] = acumulado[rol][k] / len(partidas_hoy)
 
         # Mostrar resumen general y retroalimentación
         for rol in roles:
             st.write(f"**Resumen de {rol}:**")
-            st.write(f"Daño Infligido Promedio: {promedios_totales['Daño Infligido']}")
-            st.write(f"Daño Recibido Promedio: {promedios_totales['Daño Recibido']}")
-            st.write(f"Oro Promedio: {promedios_totales['Oro Total']}")
-            st.write(f"Participación Promedio: {promedios_totales['Participación']}")
-            st.write(f"**Retroalimentación:** {generar_feedback_por_rol(rol, [promedios_totales['Daño Infligido'], promedios_totales['Daño Recibido'], promedios_totales['Oro Total'], promedios_totales['Participación']])}")
+            st.write(f"Daño Infligido Promedio: {promedios_totales[rol]['Daño Infligido']:.2f}")
+            st.write(f"Daño Recibido Promedio: {promedios_totales[rol]['Daño Recibido']:.2f}")
+            st.write(f"Oro Promedio: {promedios_totales[rol]['Oro Total']:.2f}")
+            st.write(f"Participación Promedio: {promedios_totales[rol]['Participación']:.2f}")
+            st.write(f"**Retroalimentación:** {generar_feedback_por_rol(rol, [promedios_totales[rol]['Daño Infligido'], promedios_totales[rol]['Daño Recibido'], promedios_totales[rol]['Oro Total'], promedios_totales[rol]['Participación']])}")
 
     else:
         st.write("No se han registrado partidas hoy.")
