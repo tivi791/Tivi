@@ -15,11 +15,18 @@ def autenticar_usuario(usuario, clave):
     return False
 
 # Función para calificar el desempeño
-def calificar_desempeno(valores_norm, rol):
+def calificar_desempeno(valores_norm, rol, maximos):
     dmg, rec, oro, part = valores_norm[:4]
     calificacion = ""
     mensaje = ""
 
+    # Calificación Relativa por Rol
+    percentil_dmg = (dmg / maximos['Daño Infligido']) * 100 if maximos['Daño Infligido'] != 0 else 0
+    percentil_rec = (rec / maximos['Daño Recibido']) * 100 if maximos['Daño Recibido'] != 0 else 0
+    percentil_oro = (oro / maximos['Oro Total']) * 100 if maximos['Oro Total'] != 0 else 0
+    percentil_part = (part / maximos['Participación']) * 100 if maximos['Participación'] != 0 else 0
+
+    # Ajuste de las reglas de calificación por rol
     if rol == "TOPLANER":
         if dmg < 60:
             mensaje = "Necesita mejorar el daño infligido."
@@ -80,6 +87,7 @@ def calificar_desempeno(valores_norm, rol):
             mensaje = "Excelente participación en peleas."
             calificacion = "Excelente"
 
+    # Calificación Final
     if calificacion == "Bajo":
         mensaje = f"Desempeño bajo. Requiere mejorar: {mensaje}"
     elif calificacion == "Promedio":
@@ -209,7 +217,7 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
                 b64_grafico = base64.b64encode(grafico_buf.getvalue()).decode('utf-8')
                 img_html = f'<img src="data:image/png;base64,{b64_grafico}" width="600" />'
 
-                mensaje, calificacion = calificar_desempeno(list(promedio.values()), rol)
+                mensaje, calificacion = calificar_desempeno(list(promedio.values()), rol, maximos)
 
                 html_contenido += f"<h3>{rol}</h3>"
                 html_contenido += f"<ul><li>Daño Infligido Promedio: {promedio['Daño Infligido']}</li>"
@@ -221,12 +229,7 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
                 html_contenido += f"<p><strong>Calificación: {calificacion}</strong></p>"
                 html_contenido += f"<p><strong>Retroalimentación:</strong> {mensaje}</p>"
 
-        # Agregar botón de descarga
-        st.download_button(
-            label="Descargar Resumen en HTML",
-            data=html_contenido,
-            file_name=f"resumen_partidas_{fecha_actual}.html",
-            mime="text/html"
-        )
-
-
+        # Agregar botón de descarga HTML
+        st.markdown(html_contenido, unsafe_allow_html=True)
+else:
+    st.sidebar.warning("Por favor, inicia sesión para ver los registros.")
