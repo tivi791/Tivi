@@ -21,82 +21,51 @@ def calificar_desempeno(valores_norm, rol, maximos):
     calificacion = ""
     mensaje = ""
 
-    # Calificación Relativa por Rol
     percentil_dmg = (dmg / maximos['Daño Infligido']) * 100 if maximos['Daño Infligido'] != 0 else 0
     percentil_rec = (rec / maximos['Daño Recibido']) * 100 if maximos['Daño Recibido'] != 0 else 0
     percentil_oro = (oro / maximos['Oro Total']) * 100 if maximos['Oro Total'] != 0 else 0
     percentil_part = (part / maximos['Participación']) * 100 if maximos['Participación'] != 0 else 0
 
     # Ajuste de las reglas de calificación por rol
-    if rol == "TOPLANER":
-        if dmg < 60:
-            mensaje = "Necesita mejorar el daño infligido."
-            calificacion = "Bajo"
-        elif dmg > 90:
-            mensaje = "Excelente daño infligido."
-            calificacion = "Excelente"
-
-        if oro < 50:
-            mensaje += " Necesita mejorar la economía."
-            calificacion = "Bajo"
-
-        if part < 50:
-            mensaje += " Participación en peleas baja."
-            calificacion = "Bajo"
-
-    elif rol == "JUNGLER":
-        if oro < 60:
-            mensaje = "La economía podría mejorar."
-            calificacion = "Promedio"
-
-        if rec > 70:
-            mensaje += " Daño recibido alto."
-            calificacion = "Bajo"
-
-        if part < 40:
-            mensaje += " Participación en peleas baja."
-            calificacion = "Bajo"
-
-    elif rol == "MIDLANER":
-        if dmg < 70:
-            mensaje = "Daño infligido bajo."
-            calificacion = "Bajo"
-
-        if oro < 60:
-            mensaje += " Economía por debajo del promedio."
-            calificacion = "Promedio"
-
-        if part < 50:
-            mensaje += " Necesita participar más."
-            calificacion = "Bajo"
-
-    elif rol == "ADCARRY":
-        if dmg < 80:
-            mensaje = "Daño infligido bajo."
-            calificacion = "Bajo"
-
-        if rec > 60:
-            mensaje += " Daño recibido alto."
-            calificacion = "Bajo"
-
-    elif rol == "SUPPORT":
-        if oro < 30:
-            mensaje = "Economía muy baja, aunque es normal para un support."
-            calificacion = "Promedio"
-
-        if part > 70:
-            mensaje = "Excelente participación en peleas."
-            calificacion = "Excelente"
-
-    # Calificación Final
-    if calificacion == "Bajo":
-        mensaje = f"Desempeño bajo. Requiere mejorar: {mensaje}. Para mejorar: Enfócate en mejorar el daño infligido y participar más en las peleas."
-    elif calificacion == "Promedio":
-        mensaje = f"Desempeño promedio. Se recomienda mejorar: {mensaje}. Para mejorar: Trabaja en la economía y la participación en peleas."
-    elif calificacion == "Excelente":
-        mensaje = f"Desempeño excelente. Buen trabajo: {mensaje}. Para seguir mejorando: Mantén el enfoque en optimizar tu rol."
+    reglas = {
+        "TOPLANER": lambda dmg, oro, part: (dmg >= 60, oro >= 50, part >= 50),
+        "JUNGLER": lambda dmg, oro, part: (dmg >= 70, oro >= 60, part >= 50),
+        "MIDLANER": lambda dmg, oro, part: (dmg >= 70, oro >= 60, part >= 50),
+        "ADCARRY": lambda dmg, oro, part: (dmg >= 80, oro >= 50, part >= 50),
+        "SUPPORT": lambda dmg, oro, part: (dmg >= 50, oro >= 30, part >= 70)
+    }
+    if reglas[rol](dmg, oro, part):
+        calificacion = "Excelente"
+        mensaje = f"Excelente desempeño como {rol}."
+    else:
+        calificacion = "Bajo"
+        mensaje = f"Necesita mejorar como {rol}."
 
     return mensaje, calificacion
+
+# Función para generar gráficos
+def generar_grafico(datos, titulo, categorias, maximos):
+    valores = list(datos.values())
+    valores_normalizados = [v / maximos[c] * 100 if maximos[c] != 0 else 0 for v, c in zip(valores, categorias)]
+
+    N = len(categorias)
+    angulos = [n / float(N) * 2 * pi for n in range(N)]
+    valores_normalizados += valores_normalizados[:1]
+    angulos += angulos[:1]
+
+    fig, ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(polar=True))
+    ax.plot(angulos, valores_normalizados, color='#FFD700', linewidth=2, label="Desempeño")
+    ax.fill(angulos, valores_normalizados, color='#FFD700', alpha=0.3)
+    ax.set_xticks(angulos[:-1])
+    ax.set_xticklabels(categorias, fontsize=12, fontweight='bold', color='white')
+    ax.set_yticklabels([])
+    ax.set_title(titulo, size=16, weight='bold', pad=20, color='white')
+    ax.legend(loc='upper right')
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight', facecolor='#0a0a0a')
+    buf.seek(0)
+    return buf
 
 # Configuración de la página
 st.set_page_config(page_title="Honor of Kings - Registro de Partidas", layout="wide")
@@ -112,7 +81,7 @@ st.markdown("""
 
 st.title("🏆 WOLF SEEKERS E-SPORTS (LAS) - Registro Diario de Partidas")
 
-st.sidebar.header("Iniciar sesión")
+# Autenticación de usuario
 usuario_ingresado = st.sidebar.text_input("Usuario")
 clave_ingresada = st.sidebar.text_input("Contraseña", type="password")
 
@@ -129,29 +98,7 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
     if "registro_partidas" not in st.session_state:
         st.session_state.registro_partidas = []
 
-    def generar_grafico(datos, titulo, categorias, maximos):
-        valores = list(datos.values())
-        valores_normalizados = [v / maximos[c] * 100 if maximos[c] != 0 else 0 for v, c in zip(valores, categorias)]
-
-        N = len(categorias)
-        angulos = [n / float(N) * 2 * pi for n in range(N)]
-        valores_normalizados += valores_normalizados[:1]
-        angulos += angulos[:1]
-
-        fig, ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(polar=True))
-        ax.plot(angulos, valores_normalizados, color='#FFD700', linewidth=2, label="Desempeño")
-        ax.fill(angulos, valores_normalizados, color='#FFD700', alpha=0.3)
-        ax.set_xticks(angulos[:-1])
-        ax.set_xticklabels(categorias, fontsize=12, fontweight='bold', color='white')
-        ax.set_yticklabels([])
-        ax.set_title(titulo, size=16, weight='bold', pad=20, color='white')
-        ax.legend(loc='upper right')
-
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', bbox_inches='tight', facecolor='#0a0a0a')
-        buf.seek(0)
-        return buf
-
+    # Registro de partida
     st.header("Registrar Nueva Partida")
     jugadores = []
 
@@ -214,19 +161,12 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
             if any(v > 0 for v in datos.values()):
                 promedio = {k: v / total_partidas for k, v in datos.items()}
                 categorias = list(promedio.keys())
-                grafico_buf = generar_grafico(promedio, f"{rol} - Desempeño Promedio", categorias, maximos)
-                b64_grafico = base64.b64encode(grafico_buf.getvalue()).decode('utf-8')
-                img_html = f'<img src="data:image/png;base64,{b64_grafico}" width="600" />'
+                grafico_buf = generar_grafico(promedio, f"{rol} - Desempeño", categorias, maximos)
 
-                mensaje, calificacion = calificar_desempeno(list(promedio.values()), rol, maximos)
-
-                html_contenido += f"<h3>{rol}</h3>"
-                html_contenido += f"<ul><li>Daño Infligido Promedio: {promedio['Daño Infligido']}</li>"
-                html_contenido += f"<li>Daño Recibido Promedio: {promedio['Daño Recibido']}</li>"
-                html_contenido += f"<li>Oro Total Promedio: {promedio['Oro Total']}</li>"
-                html_contenido += f"<li>Participación Promedio: {promedio['Participación']}</li></ul>"
-                html_contenido += f"<p><strong>Gráfico de Desempeño:</strong></p>"
+                img_html = f'<img src="data:image/png;base64,{base64.b64encode(grafico_buf.read()).decode()}" width="100%" />'
+                html_contenido += f"<div><strong>{rol}</strong></div>"
                 html_contenido += f"<div>{img_html}</div>"
+                mensaje, calificacion = calificar_desempeno(list(promedio.values()), rol, maximos)
                 html_contenido += f"<p><strong>Retroalimentación: </strong>{mensaje}</p>"
 
         st.markdown(html_contenido, unsafe_allow_html=True)
