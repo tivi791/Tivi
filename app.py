@@ -20,12 +20,13 @@ def calificar_desempeno(valores_norm, rol, maximos):
     dmg, rec, oro, part = valores_norm[:4]
     calificacion = ""
     mensaje = ""
-
+    
+    # Cálculo del desempeño basado en el percentil
     percentil_dmg = (dmg / maximos['Daño Infligido']) * 100 if maximos['Daño Infligido'] != 0 else 0
     percentil_rec = (rec / maximos['Daño Recibido']) * 100 if maximos['Daño Recibido'] != 0 else 0
     percentil_oro = (oro / maximos['Oro Total']) * 100 if maximos['Oro Total'] != 0 else 0
     percentil_part = (part / maximos['Participación']) * 100 if maximos['Participación'] != 0 else 0
-
+    
     # Ajuste de las reglas de calificación por rol
     reglas = {
         "TOPLANER": lambda dmg, oro, part: (dmg >= 60, oro >= 50, part >= 50),
@@ -34,15 +35,16 @@ def calificar_desempeno(valores_norm, rol, maximos):
         "ADCARRY": lambda dmg, oro, part: (dmg >= 80, oro >= 50, part >= 50),
         "SUPPORT": lambda dmg, oro, part: (dmg >= 50, oro >= 30, part >= 70)
     }
-
+    
+    # Calificación
     if reglas[rol](dmg, oro, part):
         calificacion = "Excelente"
-        mensaje = f"Excelente desempeño como {rol}."
+        mensaje = f"Excelente desempeño como {rol}. ¡Sigue así!"
     else:
         calificacion = "Bajo"
-        mensaje = f"Necesita mejorar como {rol}."
+        mensaje = f"Necesita mejorar como {rol}. Revisa los siguientes puntos de mejora."
 
-    return mensaje, calificacion
+    return mensaje, calificacion, percentil_dmg, percentil_rec, percentil_oro, percentil_part
 
 # Función para generar gráficos
 def generar_grafico(datos, titulo, categorias, maximos):
@@ -167,8 +169,11 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
                 img_html = f'<img src="data:image/png;base64,{base64.b64encode(grafico_buf.read()).decode()}" width="100%" />'
                 html_contenido += f"<div><strong>{rol}</strong></div>"
                 html_contenido += f"<div>{img_html}</div>"
-                mensaje, calificacion = calificar_desempeno(list(promedio.values()), rol, maximos)
-                html_contenido += f"<p><strong>Retroalimentación: </strong>{mensaje}</p>"
+                
+                # Generación de la retroalimentación detallada
+                mensaje, calificacion, percentil_dmg, percentil_rec, percentil_oro, percentil_part = calificar_desempeno(list(promedio.values()), rol, maximos)
+                html_contenido += f"<p><strong>Retroalimentación:</strong> {mensaje}</p>"
+                html_contenido += f"<p><strong>Daño Infligido:</strong> {percentil_dmg:.1f}% - <strong>Oro Total:</strong> {percentil_oro:.1f}% - <strong>Participación:</strong> {percentil_part:.1f}%</p>"
 
         st.markdown(html_contenido, unsafe_allow_html=True)
 
