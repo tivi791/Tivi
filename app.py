@@ -90,11 +90,11 @@ def calificar_desempeno(valores_norm, rol, maximos):
 
     # Calificación Final
     if calificacion == "Bajo":
-        mensaje = f"Desempeño bajo. Requiere mejorar: {mensaje}"
+        mensaje = f"Desempeño bajo. Requiere mejorar: {mensaje}. Para mejorar: Enfócate en mejorar el daño infligido y participar más en las peleas."
     elif calificacion == "Promedio":
-        mensaje = f"Desempeño promedio. Se recomienda mejorar: {mensaje}"
+        mensaje = f"Desempeño promedio. Se recomienda mejorar: {mensaje}. Para mejorar: Trabaja en la economía y la participación en peleas."
     elif calificacion == "Excelente":
-        mensaje = f"Desempeño excelente. Buen trabajo: {mensaje}"
+        mensaje = f"Desempeño excelente. Buen trabajo: {mensaje}. Para seguir mejorando: Mantén el enfoque en optimizar tu rol."
 
     return mensaje, calificacion
 
@@ -226,21 +226,10 @@ if "autenticado" in st.session_state and st.session_state.autenticado:
                 html_contenido += f"<li>Oro Total Promedio: {promedio['Oro Total']}</li>"
                 html_contenido += f"<li>Participación Promedio: {promedio['Participación']}</li></ul>"
                 html_contenido += f"<p><strong>Gráfico de Desempeño:</strong></p>"
-                html_contenido += img_html
-                html_contenido += f"<p><strong>Calificación: {calificacion}</strong></p>"
-                html_contenido += f"<p><strong>Retroalimentación:</strong> {mensaje}</p>"
+                html_contenido += f"<div>{img_html}</div>"
+                html_contenido += f"<p><strong>Retroalimentación: </strong>{mensaje}</p>"
 
-        # Agregar botón de descarga HTML
-        html_file = os.path.join("summary.html")
-        with open(html_file, 'w') as file:
-            file.write(html_contenido)
+        st.markdown(html_contenido, unsafe_allow_html=True)
 
-        with open(html_file, 'rb') as f:
-            st.download_button(
-                label="Descargar Resumen como HTML",
-                data=f,
-                file_name="resumen_partidas_hoy.html",
-                mime="text/html"
-            )
 else:
-    st.sidebar.warning("Por favor, inicia sesión para ver los registros.")
+    st.warning("Por favor, inicia sesión para continuar.")
