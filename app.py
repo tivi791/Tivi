@@ -1,3 +1,4 @@
+```python
 # app.py
 
 import streamlit as st
@@ -23,32 +24,55 @@ def autenticar_usuario(usuario, clave):
 # FUNCIONES DE NEGOCIO
 # =============================
 def calificar_desempeno(valores_norm, rol, maximos):
-    dmg, rec, oro, part = valores_norm
-    pct = lambda v, m: (v / m) * 100 if m else 0
-    p_dmg = pct(dmg, maximos["Daño Infligido"])
-    p_rec = pct(rec, maximos["Daño Recibido"])
-    p_oro = pct(oro, maximos["Oro Total"])
-    p_part = pct(part, maximos["Participación"])
-    reglas = {
-        "TOPLANER": lambda d,o,p: d>=80 and o>=60 and p>=60,
-        "JUNGLER":  lambda d,o,p: d>=85 and o>=70 and p>=60,
-        "MIDLANER": lambda d,o,p: d>=85 and o>=70 and p>=60,
-        "ADCARRY":  lambda d,o,p: d>=90 and o>=70 and p>=60,
-        "SUPPORT":  lambda d,o,p: d>=60 and o>=50 and p>=70,
-    }
-    ok = reglas[rol](p_dmg, p_oro, p_part)
-    msg = f"Excelente desempeño como {rol}. ¡Sigue así!" if ok else f"Requiere mejorar como {rol}."
-    cal = "Excelente" if ok else "Bajo"
-    return msg, cal, p_dmg, p_rec, p_oro, p_part
+    """
+    Genera un feedback detallado y profesional para cada rol,
+    indicando puntos fuertes y ámbitos de mejora.
+    """
+    dmg_pct, rec_pct, oro_pct, part_pct = valores_norm
+    feedback = []
 
+    # Puntos fuertes
+    if dmg_pct >= 80:
+        feedback.append("🔹 Buen control de daño: mantén tu agresividad y optimiza tu rotación de habilidades.")
+    else:
+        feedback.append("🔸 Incrementa tu daño: enfócate en mejorar el last-hitting, selecciona objetivos prioritarios y mejora tu build de objetos de daño.")
+
+    if oro_pct >= 70:
+        feedback.append("🔹 Gestión de oro sólida: continúa maximizando tu CS y eficientiza tu farmeo en jungla.")
+    else:
+        feedback.append("🔸 Aumenta tu oro: practica el last-hitting, aprovecha oleadas de súbditos y minimiza muertes innecesarias.")
+
+    if part_pct >= 60:
+        feedback.append("🔹 Buena participación en teamfights: sigue comunicándote y posicionándote correctamente.")
+    else:
+        feedback.append("🔸 Incrementa tu presencia en peleas: trabaja tu visión de mapa, responde a llamadas de escuadrón y usa teletransportes con intención.")
+
+    # Protección y supervivencia
+    if rec_pct <= 50:
+        feedback.append("🔹 Tu supervivencia es aceptable: mantiene tu posición defensiva cuando sea necesario.")
+    else:
+        feedback.append("🔸 Reduce el daño recibido: mejora tu posicionamiento en peleas, usa objetos defensivos y evita el overextending.")
+
+    calificacion = (
+        "Excelente" if dmg_pct >= 80 and oro_pct >= 70 and part_pct >= 60 else "Bajo"
+    )
+    mensaje = "\n".join(feedback)
+
+    return mensaje, calificacion, dmg_pct, rec_pct, oro_pct, part_pct
+
+# =============================
+# FUNCIONES AUXILIARES
+# =============================
 def generar_grafico(datos, titulo, maximos):
     categorias = list(datos.keys())
     valores = [datos[c] for c in categorias]
-    valores_norm = [(v / maximos[c])*100 if maximos[c] else 0 for v,c in zip(valores,categorias)]
+    valores_norm = [(v / maximos[c]) * 100 if maximos[c] else 0 for v, c in zip(valores, categorias)]
     valores_norm += valores_norm[:1]
-    ang = [n/float(len(categorias))*2*pi for n in range(len(categorias))]
+
+    ang = [n / float(len(categorias)) * 2 * pi for n in range(len(categorias))]
     ang += ang[:1]
-    fig, ax = plt.subplots(figsize=(6,6), subplot_kw=dict(polar=True))
+
+    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
     ax.plot(ang, valores_norm, color='#FFD700', linewidth=2)
     ax.fill(ang, valores_norm, color='#FFD700', alpha=0.3)
     ax.set_xticks(ang[:-1])
@@ -61,6 +85,9 @@ def generar_grafico(datos, titulo, maximos):
     plt.close(fig)
     return buf
 
+# =============================
+# EXPORTACIÓN
+# =============================
 def exportar_pdf(resumen, fecha, equipo="WOLF SEEKERS E-SPORTS"):
     pdf = FPDF()
     pdf.add_page()
@@ -72,11 +99,11 @@ def exportar_pdf(resumen, fecha, equipo="WOLF SEEKERS E-SPORTS"):
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(0, 8, rol, ln=True)
         pdf.set_font("Arial", size=11)
-        for k,v in datos.items():
+        for k, v in datos.items():
             pdf.cell(0, 6, f"{k}: {v}", ln=True)
-    # dest='S' devuelve el PDF en memoria como cadena
     pdf_bytes = pdf.output(dest='S').encode('latin-1')
     return pdf_bytes
+
 
 def exportar_excel(partidas):
     registros = []
@@ -105,7 +132,7 @@ input, .stNumberInput input { background-color: #1e1e1e; color: white; }
 """, unsafe_allow_html=True)
 
 # =============================
-# INTERFAZ
+# INTERFAZ PRINCIPAL
 # =============================
 st.title("🏆 WOLF SEEKERS E-SPORTS - Registro Diario")
 
@@ -118,18 +145,17 @@ if st.sidebar.button("Iniciar sesión"):
         st.sidebar.success("¡Sesión iniciada!")
     else:
         st.sidebar.error("Credenciales incorrectas.")
-
 if not st.session_state.get("auth"):
     st.stop()
 
-# Registro
+# Registro de partida
 roles = ["TOPLANER","JUNGLER","MIDLANER","ADCARRY","SUPPORT"]
 metricas = ["Daño Infligido","Daño Recibido","Oro Total","Participación"]
 if "partidas" not in st.session_state:
     st.session_state["partidas"] = []
 
 st.header("Registrar Nueva Partida")
-with st.form("f1"):
+with st.form("form_registro"):
     datos_juego = []
     for rol in roles:
         st.subheader(rol)
@@ -157,11 +183,12 @@ if hoy_partidas:
     for p in hoy_partidas:
         for i, rol in enumerate(roles):
             for m in metricas:
-                v = p["datos"][i][m]
-                acumulado[rol][m] += v
+                acumulado[rol][m] += p["datos"][i][m]
+    # calcular máximos promedios
     for rol in roles:
         for m in metricas:
-            maximos[m] = max(maximos[m], acumulado[rol][m]/len(hoy_partidas))
+            promedio = acumulado[rol][m]/len(hoy_partidas)
+            maximos[m] = max(maximos[m], promedio)
     resumen_export = {}
     for rol in roles:
         prom = {m: acumulado[rol][m]/len(hoy_partidas) for m in metricas}
@@ -171,8 +198,9 @@ if hoy_partidas:
         msg, cal, pdmg, prec, poro, ppart = calificar_desempeno(
             [prom[m] for m in metricas], rol, maximos
         )
-        st.write(f"**Calificación:** {cal}")
-        st.write(f"**Feedback:** {msg}")
+        st.markdown(f"**Calificación:** {cal}")
+        for linea in msg.split("\n"):
+            st.write(linea)
         resumen_export[rol] = {
             "Daño %": f"{pdmg:.1f}%",
             "Recibido %": f"{prec:.1f}%",
@@ -180,7 +208,6 @@ if hoy_partidas:
             "Part %": f"{ppart:.1f}%",
             "Calificación": cal
         }
-    # Descarga PDF y Excel
     c1, c2 = st.columns(2)
     with c1:
         pdf_bytes = exportar_pdf(resumen_export, hoy)
@@ -191,3 +218,4 @@ if hoy_partidas:
         st.download_button("📊 Descargar Excel", data=xlsx,
                            file_name=f"Partidas_{hoy}.xlsx",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+```
