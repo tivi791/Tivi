@@ -72,10 +72,12 @@ def exportar_pdf(datos_por_rol, fecha, equipo="WOLF SEEKERS"):
         for k, v in resumen.items():
             pdf.cell(200, 8, txt=f"{k}: {v}", ln=True)
     
+    # Guardar el PDF en un buffer de memoria
     buffer = io.BytesIO()
     pdf.output(buffer)
     buffer.seek(0)
     return buffer
+
 
 def exportar_excel(partidas):
     registros = []
