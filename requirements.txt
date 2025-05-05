@@ -3,3 +3,5 @@ fpdf
 gitpython
 matplotlib
 requests
+pandas
+openpyxl
