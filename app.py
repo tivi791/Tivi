@@ -34,6 +34,7 @@ def calificar_desempeno(valores_norm, rol, maximos):
         "ADCARRY": lambda dmg, oro, part: (dmg >= 80, oro >= 50, part >= 50),
         "SUPPORT": lambda dmg, oro, part: (dmg >= 50, oro >= 30, part >= 70)
     }
+
     if reglas[rol](dmg, oro, part):
         calificacion = "Excelente"
         mensaje = f"Excelente desempeño como {rol}."
