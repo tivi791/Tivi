@@ -39,7 +39,6 @@ def calificar_desempeno(valores_norm, rol, maximos):
 
     mejoras = []
     for métrica, pct_val in percentiles.items():
-        # No evaluamos daño recibido, solo lo mostramos
         if métrica in umbrales[rol] and pct_val < umbrales[rol][métrica]:
             if métrica == "Daño Infligido":
                 mejoras.append("Aumenta tu daño infligido: mejora tu farmeo y presiona más en línea.")
@@ -48,12 +47,12 @@ def calificar_desempeno(valores_norm, rol, maximos):
             if métrica == "Participación":
                 mejoras.append("Participa más en peleas de equipo y visión del mapa.")
 
-    # Siempre sugerimos fortalecer debilitados
     if not mejoras:
         mensaje = f"Excelente desempeño como {rol}. Sigue manteniendo tu nivel alto en todas las métricas."
         cal = "Excelente"
     else:
-        mensaje = f"Áreas de mejora como {rol}:\n• " + "\n• ".join(mejoras)
+        # usamos guiones en lugar de viñetas
+        mensaje = f"Áreas de mejora como {rol}:\n- " + "\n- ".join(mejoras)
         cal = "Bajo"
 
     return mensaje, cal, percentiles
@@ -61,7 +60,7 @@ def calificar_desempeno(valores_norm, rol, maximos):
 def generar_grafico(datos, titulo, maximos):
     categorias = list(datos.keys())
     valores = [datos[c] for c in categorias]
-    valores_norm = [(v / maximos[c])*100 if maximos[c] else 0 for v,c in zip(valores,categorias)]
+    valores_norm = [(v / maximos[c])*100 if maximos[c] else 0 for v, c in zip(valores, categorias)]
     valores_norm += valores_norm[:1]
     ang = [n/float(len(categorias))*2*pi for n in range(len(categorias))]
     ang += ang[:1]
@@ -81,6 +80,7 @@ def generar_grafico(datos, titulo, maximos):
 def exportar_pdf(resumen, fecha, equipo="WOLF SEEKERS E-SPORTS"):
     pdf = FPDF()
     pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.set_font("Arial", size=12)
     pdf.cell(0, 10, f"Resumen Diario - {fecha}", ln=True, align="C")
     pdf.cell(0, 10, f"Equipo: {equipo}", ln=True, align="C")
@@ -89,10 +89,13 @@ def exportar_pdf(resumen, fecha, equipo="WOLF SEEKERS E-SPORTS"):
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(0, 8, rol, ln=True)
         pdf.set_font("Arial", size=11)
-        for k,v in datos.items():
-            pdf.multi_cell(0, 6, f"{k}: {v}")
-    pdf_bytes = pdf.output(dest='S').encode('latin-1')
-    return pdf_bytes
+        for k, v in datos.items():
+            texto = f"{k}: {v}"
+            # eliminamos cualquier caracter fuera Latin-1 (e.g. viñetas)
+            texto = texto.encode('latin-1', 'ignore').decode('latin-1')
+            pdf.multi_cell(0, 6, texto)
+    # dest='S' nos devuelve el PDF en memoria
+    return pdf.output(dest='S').encode('latin-1')
 
 def exportar_excel(partidas):
     registros = []
@@ -127,7 +130,7 @@ st.title("🏆 WOLF SEEKERS E-SPORTS - Registro Diario")
 
 # Login
 usuario = st.sidebar.text_input("Usuario")
-clave   = st.sidebar.text_input("Contraseña", type="password")
+clave = st.sidebar.text_input("Contraseña", type="password")
 if st.sidebar.button("Iniciar sesión"):
     if autenticar_usuario(usuario, clave):
         st.session_state["auth"] = True
@@ -169,8 +172,7 @@ st.write(f"Partidas hoy: {len(hoy_partidas)}")
 
 if hoy_partidas:
     acumulado = {r:{m:0 for m in metricas} for r in roles}
-    maximos  = {m:0 for m in metricas}
-    # Acumular y calcular máximos
+    maximos = {m:0 for m in metricas}
     for p in hoy_partidas:
         for i, rol in enumerate(roles):
             for m in metricas:
@@ -181,19 +183,17 @@ if hoy_partidas:
             maximos[m] = max(maximos[m], prom)
 
     resumen_export = {}
-    # Mostrar por rol
     for rol in roles:
         prom = {m: acumulado[rol][m] / len(hoy_partidas) for m in metricas}
         st.subheader(rol)
         buf = generar_grafico(prom, rol, maximos)
         st.image(buf, use_container_width=True)
 
-        # Feedback mejorado
         msg, cal, percentiles = calificar_desempeno(
             [prom[m] for m in metricas], rol, maximos
         )
         st.markdown(f"**Calificación:** {cal}")
-        st.markdown(f"**Feedback detallado:**<br>{msg.replace(chr(10), '<br>')}", unsafe_allow_html=True)
+        st.markdown(f"**Feedback detallado:**<br>{msg.replace('\\n','<br>')}", unsafe_allow_html=True)
 
         resumen_export[rol] = {
             "Daño %": f"{percentiles['Daño Infligido']:.1f}%",
@@ -204,7 +204,6 @@ if hoy_partidas:
             "Feedback": msg
         }
 
-    # Descarga PDF y Excel
     c1, c2 = st.columns(2)
     with c1:
         pdf_bytes = exportar_pdf(resumen_export, hoy)
