@@ -76,8 +76,10 @@ def exportar_pdf(datos_por_rol, fecha, equipo="WOLF SEEKERS"):
     buffer = io.BytesIO()
     pdf.output(buffer)
     buffer.seek(0)
-    return buffer
 
+    # Convertir a base64 para que Streamlit pueda mostrarlo o permitir su descarga
+    pdf_base64 = base64.b64encode(buffer.read()).decode()
+    return pdf_base64
 
 def exportar_excel(partidas):
     registros = []
