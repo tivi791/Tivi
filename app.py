@@ -4,7 +4,6 @@ from math import pi
 import io
 import base64
 from datetime import datetime
-import os
 
 # Lista de usuarios permitidos (usuario: contraseña)
 usuarios_permitidos = {"Tivi": "2107", "Ghost": "203", "usuario3": "clave3"}
@@ -27,22 +26,22 @@ def calificar_desempeno(valores_norm, rol, maximos):
     percentil_oro = (oro / maximos['Oro Total']) * 100 if maximos['Oro Total'] != 0 else 0
     percentil_part = (part / maximos['Participación']) * 100 if maximos['Participación'] != 0 else 0
     
-    # Ajuste de las reglas de calificación por rol
+    # Ajuste de las reglas de calificación por rol, con criterios estrictos
     reglas = {
-        "TOPLANER": lambda dmg, oro, part: (dmg >= 60, oro >= 50, part >= 50),
-        "JUNGLER": lambda dmg, oro, part: (dmg >= 70, oro >= 60, part >= 50),
-        "MIDLANER": lambda dmg, oro, part: (dmg >= 70, oro >= 60, part >= 50),
-        "ADCARRY": lambda dmg, oro, part: (dmg >= 80, oro >= 50, part >= 50),
-        "SUPPORT": lambda dmg, oro, part: (dmg >= 50, oro >= 30, part >= 70)
+        "TOPLANER": lambda dmg, oro, part: (dmg >= 80, oro >= 60, part >= 60), # Más exigente en daño y oro
+        "JUNGLER": lambda dmg, oro, part: (dmg >= 85, oro >= 70, part >= 60), # Aumento de los valores para jungler
+        "MIDLANER": lambda dmg, oro, part: (dmg >= 85, oro >= 70, part >= 60), # Exigente para midlaner
+        "ADCARRY": lambda dmg, oro, part: (dmg >= 90, oro >= 70, part >= 60), # ADC con un umbral de daño alto
+        "SUPPORT": lambda dmg, oro, part: (dmg >= 60, oro >= 50, part >= 70) # Mayor énfasis en participación
     }
     
-    # Calificación
+    # Evaluación del desempeño
     if reglas[rol](dmg, oro, part):
         calificacion = "Excelente"
         mensaje = f"Excelente desempeño como {rol}. ¡Sigue así!"
     else:
         calificacion = "Bajo"
-        mensaje = f"Necesita mejorar como {rol}. Revisa los siguientes puntos de mejora."
+        mensaje = f"Requiere mejorar como {rol}. Considera optimizar estos puntos."
 
     return mensaje, calificacion, percentil_dmg, percentil_rec, percentil_oro, percentil_part
 
