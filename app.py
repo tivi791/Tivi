@@ -176,6 +176,7 @@ if st.session_state.get("logged_in", False):
             ).properties(width=700)
             st.altair_chart(chart, use_container_width=True)
 
+            # Guardar el gráfico de Matplotlib
             fig, ax = plt.subplots(figsize=(10, 5))
             for var in ["Oro", "Daño Infligido", "Daño Recibido", "Participación (%)", tr["rendimiento"]]:
                 ax.plot(promedio["Línea"], promedio[var], marker='o', label=var)
@@ -185,6 +186,11 @@ if st.session_state.get("logged_in", False):
             plt.tight_layout()
             grafico_path = "grafico_promedio.png"
             plt.savefig(grafico_path)
+
+            # Incluir el gráfico en HTML
+            with open(grafico_path, "rb") as img_file:
+                encoded_img = img_file.read().encode("base64").decode()
+
         else:
             promedio = pd.DataFrame()
             grafico_path = None
@@ -208,7 +214,7 @@ if st.session_state.get("logged_in", False):
                 <h2>{tr["promedio"]}</h2>
                 {promedio.to_html(index=False)}
                 <h3>{tr["grafico"]}</h3>
-                <img src="{grafico_path}" alt="Grafico Promedio" width="800">
+                <img src="data:image/png;base64,{encoded_img}" alt="Grafico Promedio" width="800">
             </body>
             </html>
             """
