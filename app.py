@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
+from fpdf import FPDF
+import matplotlib.pyplot as plt
+import os
 
 # Diccionario de usuarios y contraseñas
 USUARIOS = {"Tivi": "2107", "Ghost": "203"}
@@ -18,10 +21,8 @@ def login(username, password):
 # Configuración de la página
 st.set_page_config(page_title="WOLF SEEKERS - Tracker Diario", layout="wide")
 
-# Idioma
 idioma = st.selectbox("🌐 Elige idioma / Select language", ["Español", "English"])
 
-# Traducciones
 T = {
     "Español": {
         "titulo": "🐺 WOLF SEEKERS E-SPORTS - Registro Diario de Rendimiento por Línea",
@@ -45,7 +46,8 @@ T = {
         "regular": "⚠️ Rendimiento regular. Necesita ajustes.",
         "malo": "❌ Bajo rendimiento. Revisar toma de decisiones.",
         "rol": "Rol",
-        "puntaje": "Puntaje de Rendimiento"
+        "puntaje": "Puntaje de Rendimiento",
+        "exportar": "📤 Exportar todo a PDF"
     },
     "English": {
         "titulo": "🐺 WOLF SEEKERS E-SPORTS - Daily Performance Tracker by Role",
@@ -69,11 +71,11 @@ T = {
         "regular": "⚠️ Average performance. Needs adjustments.",
         "malo": "❌ Poor performance. Review your decisions.",
         "rol": "Role",
-        "puntaje": "Performance Score"
+        "puntaje": "Performance Score",
+        "exportar": "📤 Export all to PDF"
     }
 }
 
-# Traducción según el idioma seleccionado
 tr = T[idioma]
 
 # Login
@@ -90,7 +92,6 @@ if st.button("Iniciar sesión"):
         st.session_state.logged_in = False
         st.error(f"Error: {message}")
 
-# Lógica principal
 if st.session_state.get("logged_in", False):
     lineas = ["TOPLANER", "JUNGLA", "MIDLANER", "ADC", "SUPPORT"]
     datos = []
@@ -98,16 +99,16 @@ if st.session_state.get("logged_in", False):
     tab1, tab2, tab3, tab4 = st.tabs([tr["registro"], tr["historial"], tr["promedio"], tr["feedback"]])
 
     with tab1:
-        st.markdown("### 📌 Ingresa los datos por línea: ")
+        st.markdown("### 📌 Ingresa los datos por línea:")
         for linea in lineas:
             with st.expander(f"📍 {linea}", expanded=False):
-                oro = st.number_input(f"{linea} - {tr['oro']}", min_value=0, step=100, key=f"oro_{linea}")
-                dano_i = st.number_input(f"{linea} - {tr['dano_i']}", min_value=0, step=100, key=f"di_{linea}")
-                dano_r = st.number_input(f"{linea} - {tr['dano_r']}", min_value=0, step=100, key=f"dr_{linea}")
+                oro = st.number_input(f"{linea} - {tr['oro']}", 0, step=100, key=f"oro_{linea}")
+                dano_i = st.number_input(f"{linea} - {tr['dano_i']}", 0, step=100, key=f"di_{linea}")
+                dano_r = st.number_input(f"{linea} - {tr['dano_r']}", 0, step=100, key=f"dr_{linea}")
                 participacion = st.slider(f"{linea} - {tr['participacion']}", 0, 100, key=f"p_{linea}")
-                asesinatos = st.number_input(f"{linea} - {tr['asesinatos']}", min_value=0, step=1, key=f"a_{linea}")
-                muertes = st.number_input(f"{linea} - {tr['muertes']}", min_value=0, step=1, key=f"m_{linea}")
-                asistencias = st.number_input(f"{linea} - {tr['asistencias']}", min_value=0, step=1, key=f"as_{linea}")
+                asesinatos = st.number_input(f"{linea} - {tr['asesinatos']}", 0, step=1, key=f"a_{linea}")
+                muertes = st.number_input(f"{linea} - {tr['muertes']}", 0, step=1, key=f"m_{linea}")
+                asistencias = st.number_input(f"{linea} - {tr['asistencias']}", 0, step=1, key=f"as_{linea}")
 
                 datos.append({
                     "Línea": linea,
@@ -158,6 +159,7 @@ if st.session_state.get("logged_in", False):
             historial_df = pd.concat(st.session_state.partidas_dia, ignore_index=True)
             st.write(historial_df)
         else:
+            historial_df = pd.DataFrame()
             st.write("No hay partidas guardadas.")
 
     with tab3:
@@ -175,16 +177,27 @@ if st.session_state.get("logged_in", False):
                 tooltip=["Línea", "variable", "value"]
             ).properties(width=700)
             st.altair_chart(chart, use_container_width=True)
+
+            # Guardar gráfico
+            fig, ax = plt.subplots(figsize=(10, 5))
+            for var in ["Oro", "Daño Infligido", "Daño Recibido", "Participación (%)", tr["rendimiento"]]:
+                ax.plot(promedio["Línea"], promedio[var], marker='o', label=var)
+            ax.set_title("Promedio de Rendimiento por Línea")
+            ax.legend()
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            grafico_path = "grafico_promedio.png"
+            plt.savefig(grafico_path)
         else:
+            promedio = pd.DataFrame()
+            grafico_path = None
             st.write("No hay partidas para calcular el promedio.")
 
     with tab4:
         if st.session_state.partidas_dia:
             feedback_df = pd.concat(st.session_state.partidas_dia, ignore_index=True)
-            st.write("### 🔍 Detalle de Feedback por Línea")
             st.dataframe(feedback_df[["Línea", tr["rendimiento"], "Feedback"]])
 
-            # Contador de mensajes
             st.write("### 📊 Resumen de Retroalimentación")
             feedback_counts = feedback_df["Feedback"].value_counts().reset_index()
             feedback_counts.columns = ["Mensaje", "Cantidad"]
@@ -195,7 +208,71 @@ if st.session_state.get("logged_in", False):
                 color="Mensaje:N"
             ).properties(height=300)
             st.altair_chart(chart_fb, use_container_width=True)
+
+            # Guardar gráfico de feedback
+            fig2, ax2 = plt.subplots()
+            ax2.barh(feedback_counts["Mensaje"], feedback_counts["Cantidad"], color="skyblue")
+            ax2.set_title("Resumen de Feedback")
+            plt.tight_layout()
+            feedback_path = "grafico_feedback.png"
+            plt.savefig(feedback_path)
         else:
+            feedback_df = pd.DataFrame()
+            feedback_path = None
             st.write("No hay partidas para generar retroalimentación.")
+
+    # Exportar a PDF
+    st.markdown("## 📤 Exportar informe profesional")
+    if st.button(tr["exportar"]):
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 16)
+        pdf.cell(0, 10, tr["titulo"], ln=True)
+
+        def add_table_to_pdf(title, df):
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, title, ln=True)
+            pdf.set_font("Arial", "", 10)
+            for i in range(len(df)):
+                row = df.iloc[i].astype(str).values
+                row_str = " | ".join(row)
+                pdf.multi_cell(0, 6, row_str)
+
+        if not df.empty:
+            add_table_to_pdf(tr["registro"], df)
+
+        if not historial_df.empty:
+            add_table_to_pdf(tr["historial"], historial_df)
+
+        if not promedio.empty:
+            add_table_to_pdf(tr["promedio"], promedio)
+
+        if grafico_path:
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, tr["grafico"], ln=True)
+            pdf.image(grafico_path, w=180)
+
+        if not feedback_df.empty:
+            add_table_to_pdf(tr["feedback"], feedback_df[["Línea", tr["rendimiento"], "Feedback"]])
+
+        if feedback_path:
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, "Resumen de Feedback", ln=True)
+            pdf.image(feedback_path, w=180)
+
+        output_path = "informe_tracker.pdf"
+        pdf.output(output_path)
+        with open(output_path, "rb") as f:
+            st.download_button("📄 Descargar PDF", f, file_name="informe_tracker.pdf", mime="application/pdf")
+
+        # Limpieza
+        if grafico_path and os.path.exists(grafico_path):
+            os.remove(grafico_path)
+        if feedback_path and os.path.exists(feedback_path):
+            os.remove(feedback_path)
+
 else:
     st.warning("Por favor, inicia sesión para continuar.")
