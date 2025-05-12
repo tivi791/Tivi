@@ -8,25 +8,29 @@ import pandas as pd
 import io
 import base64
 
-# =============================
+# ==============================
 # CONFIGURACIÓN Y SESIÓN
-# =============================
+# ==============================
 st.set_page_config(page_title="WOLF SEEKERS E-SPORTS", layout="wide")
 st.title("\U0001F3C6 WOLF SEEKERS E-SPORTS - Registro Diario")
 
+# Datos de autenticación
 USUARIOS = {"Tivi": "2107", "Ghost": "203", "usuario3": "clave3"}
 roles = ["TOPLANER", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
 
+# Verificar si la sesión de partidas existe
 if "partidas" not in st.session_state:
     st.session_state.partidas = []
 
-# =============================
+# ==============================
 # FUNCIONES
-# =============================
+# ==============================
 def autenticar_usuario(usuario, clave):
+    """Función para autenticar usuario"""
     return USUARIOS.get(usuario) == clave
 
 def calificar_desempeno(valores_norm, rol, maximos):
+    """Función para calificar el desempeño"""
     pct = lambda v, m: (v / m) * 100 if m else 0
     names = ["Daño Infligido", "Daño Recibido", "Oro Total", "Participación"]
     percentiles = {n: pct(v, maximos[n]) for n, v in zip(names, valores_norm)}
@@ -59,6 +63,7 @@ def calificar_desempeno(valores_norm, rol, maximos):
     return mensaje, cal, percentiles
 
 def generar_grafico(datos, titulo, maximos):
+    """Generar gráfico radar"""
     categorias = list(datos.keys())
     valores = [datos[c] for c in categorias]
     valores_norm = [(v / maximos[c])*100 if maximos[c] else 0 for v, c in zip(valores, categorias)]
@@ -79,6 +84,7 @@ def generar_grafico(datos, titulo, maximos):
     return buf
 
 def exportar_pdf(resumen, fecha, equipo="WOLF SEEKERS E-SPORTS"):
+    """Generar PDF de resumen diario"""
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -96,81 +102,86 @@ def exportar_pdf(resumen, fecha, equipo="WOLF SEEKERS E-SPORTS"):
             pdf.multi_cell(0, 6, texto)
     return pdf.output(dest='S').encode('latin-1')
 
-# =============================
-# REGISTRO PARTIDA
-# =============================
-st.header("Registrar Nueva Partida")
-nueva_partida = {}
+# ==============================
+# INICIO DE SESIÓN
+# ==============================
+st.sidebar.header("Inicio de sesión")
 
-for rol in roles:
-    st.subheader(rol)
-    dano = st.number_input(f"Daño Infligido ({rol})", min_value=0)
-    recibido = st.number_input(f"Daño Recibido ({rol})", min_value=0)
-    oro = st.number_input(f"Oro Total ({rol})", min_value=0)
-    participacion = st.number_input(f"Participación ({rol})", min_value=0)
-    nueva_partida[rol] = {"dano": dano, "recibido": recibido, "oro": oro, "participacion": participacion}
+usuario = st.sidebar.text_input("Usuario")
+clave = st.sidebar.text_input("Clave", type="password")
 
-comentario = st.text_area("Comentario del equipo sobre esta partida (opcional)")
+if st.sidebar.button("Iniciar sesión"):
+    if autenticar_usuario(usuario, clave):
+        st.session_state.usuario = usuario
+        st.success("¡Bienvenido, " + usuario + "!")
+    else:
+        st.error("Usuario o clave incorrectos")
 
-if st.button("Guardar Partida"):
-    st.session_state.partidas.append({"fecha": datetime.date.today(), "datos": nueva_partida, "comentario": comentario})
-    st.success("Partida guardada ✔️")
+# Si no está autenticado, no se puede registrar una partida ni ver el resumen
+if "usuario" in st.session_state:
+    # ==============================
+    # REGISTRO PARTIDA
+    # ==============================
+    st.header("Registrar Nueva Partida")
+    nueva_partida = {}
 
-# =============================
-# RESUMEN DIARIO
-# =============================
-st.header("Resumen Diario")
-hoy = datetime.date.today()
-hoy_partidas = [p for p in st.session_state.partidas if p["fecha"] == hoy]
-st.write(f"Partidas hoy: {len(hoy_partidas)}")
-
-if hoy_partidas:
-    acumulado = defaultdict(lambda: {"dano": 0, "recibido": 0, "oro": 0, "participacion": 0})
-
-    for partida in hoy_partidas:
-        for rol in roles:
-            datos = partida["datos"][rol]
-            acumulado[rol]["dano"] += datos["dano"]
-            acumulado[rol]["recibido"] += datos["recibido"]
-            acumulado[rol]["oro"] += datos["oro"]
-            acumulado[rol]["participacion"] += datos["participacion"]
-
-    resumen = {}
     for rol in roles:
-        stats = acumulado[rol]
-        promedio = {k: stats[k] / len(hoy_partidas) for k in stats}
-        maximos = {"Daño Infligido":100000, "Daño Recibido":100000, "Oro Total":15000, "Participación":100}
-        valores_norm = [promedio["dano"], promedio["recibido"], promedio["oro"], promedio["participacion"]]
-        feedback, calif, percentiles = calificar_desempeno(valores_norm, rol, maximos)
-        resumen[rol] = {
-            "Daño Infligido Promedio": promedio["dano"],
-            "Daño Recibido Promedio": promedio["recibido"],
-            "Oro Total Promedio": promedio["oro"],
-            "Participación Promedio": promedio["participacion"],
-            "Calificación": calif,
-            "Feedback": feedback
-        }
         st.subheader(rol)
-        st.write(resumen[rol])
+        dano = st.number_input(f"Daño Infligido ({rol})", min_value=0)
+        recibido = st.number_input(f"Daño Recibido ({rol})", min_value=0)
+        oro = st.number_input(f"Oro Total ({rol})", min_value=0)
+        participacion = st.number_input(f"Participación ({rol})", min_value=0)
+        nueva_partida[rol] = {"dano": dano, "recibido": recibido, "oro": oro, "participacion": participacion}
 
-    comentarios_relevantes = [p.get("comentario", "") for p in hoy_partidas if len(p.get("comentario", "")) > 20]
-    if comentarios_relevantes:
-        st.subheader("\U0001F9E0 Comentarios detectados:")
-        for comentario in comentarios_relevantes:
-            analisis = []
-            if "afk" in comentario.lower():
-                analisis.append("⚠️ Se reportó un jugador AFK.")
-            if "visión" in comentario.lower() or "ward" in comentario.lower():
-                analisis.append("👁️ Falta de visión mencionada. Refuerza uso de sentinelas y control de mapa.")
-            if "tilt" in comentario.lower() or "flame" in comentario.lower():
-                analisis.append("😠 Posible mal ambiente. Refuerza comunicación positiva y ánimo del equipo.")
-            if analisis:
-                st.markdown(f"**Comentario:** _{comentario}_")
-                st.markdown("\n".join(analisis))
+    # Lista de opciones para comentarios
+    st.subheader("Retroalimentación del equipo")
+    opciones_comentario = ["Seleccionar una opción...", "AFK", "Problemas de comunicación", "Falta de visión", "Mal ambiente", "Buen trabajo en equipo"]
+    comentario = st.selectbox("Seleccione un comentario:", opciones_comentario)
 
-# =============================
+    if st.button("Guardar Partida"):
+        st.session_state.partidas.append({"fecha": datetime.date.today(), "datos": nueva_partida, "comentario": comentario})
+        st.success("Partida guardada ✔️")
+
+    # ==============================
+    # RESUMEN DIARIO
+    # ==============================
+    st.header("Resumen Diario")
+    hoy = datetime.date.today()
+    hoy_partidas = [p for p in st.session_state.partidas if p["fecha"] == hoy]
+    st.write(f"Partidas hoy: {len(hoy_partidas)}")
+
+    if hoy_partidas:
+        acumulado = defaultdict(lambda: {"dano": 0, "recibido": 0, "oro": 0, "participacion": 0})
+
+        for partida in hoy_partidas:
+            for rol in roles:
+                datos = partida["datos"][rol]
+                acumulado[rol]["dano"] += datos["dano"]
+                acumulado[rol]["recibido"] += datos["recibido"]
+                acumulado[rol]["oro"] += datos["oro"]
+                acumulado[rol]["participacion"] += datos["participacion"]
+
+        resumen = {}
+        for rol in roles:
+            stats = acumulado[rol]
+            promedio = {k: stats[k] // len(hoy_partidas) for k in stats}
+            maximos = {"Daño Infligido":100000, "Daño Recibido":100000, "Oro Total":15000, "Participación":100}
+            valores_norm = [promedio["dano"], promedio["recibido"], promedio["oro"], promedio["participacion"]]
+            feedback, calif, percentiles = calificar_desempeno(valores_norm, rol, maximos)
+            resumen[rol] = {
+                "Daño Infligido Promedio": promedio["dano"],
+                "Daño Recibido Promedio": promedio["recibido"],
+                "Oro Total Promedio": promedio["oro"],
+                "Participación Promedio": promedio["participacion"],
+                "Calificación": calif,
+                "Feedback": feedback
+            }
+            st.subheader(rol)
+            st.write(resumen[rol])
+
+# ==============================
 # ESTILOS PERSONALIZADOS
-# =============================
+# ==============================
 st.markdown("""
 <style>
 body, .css-1d391kg { background-color: #0a0a0a; color: white; }
