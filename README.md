@@ -9,8 +9,8 @@ App en Streamlit para:
 ## Instalación
 
 ```bash
-git clone https://github.com/<tu-usuario>/<tu-repo>.git
-cd <tu-repo>
+git clone https://github.com/tivi791/Tivi.git
+cd Tivi
 python -m venv env
-source env/bin/activate  # o env\Scripts\activate
+source env/bin/activate  # En Windows: env\Scripts\activate
 pip install -r requirements.txt
