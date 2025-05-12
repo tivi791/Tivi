@@ -212,24 +212,26 @@ if st.session_state.get("logged_in", False):
             # Guardar gráfico de feedback
             fig2, ax2 = plt.subplots()
             ax2.barh(feedback_counts["Mensaje"], feedback_counts["Cantidad"], color="skyblue")
-            ax2.set_title("Resumen de Feedback")
+            ax2.set_xlabel("Cantidad")
+            ax2.set_title("Retroalimentación por Línea")
             plt.tight_layout()
             feedback_path = "grafico_feedback.png"
             plt.savefig(feedback_path)
+
+        if grafico_path and feedback_path:
+            # Crear PDF
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=12)
+            pdf.cell(200, 10, txt=tr["titulo"], ln=True, align="C")
+            pdf.ln(10)
+
+            if os.path.exists(grafico_path):
+                pdf.image(grafico_path, x=10, y=50, w=180)
+            if os.path.exists(feedback_path):
+                pdf.image(feedback_path, x=10, y=150, w=180)
+
+            pdf_output = pdf.output(dest='S')  # No codificar en 'latin1'
+            st.download_button(label=tr["exportar"], data=pdf_output, file_name="reporte_diario.pdf", mime="application/pdf")
         else:
-            feedback_df = pd.DataFrame()
-            feedback_path = None
-            st.write("No hay partidas para generar retroalimentación.")
-
-    with open("reporte_diario.pdf", "wb") as pdf_file:
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, txt=tr["titulo"], ln=True, align="C")
-        pdf.ln(10)
-
-        if "grafico_feedback.png" in os.listdir():
-            pdf.image("grafico_feedback.png", x=10, y=50, w=180)
-
-        pdf_output = pdf.output(dest='S').encode('latin1')
-        st.download_button(label=tr["exportar"], data=pdf_output, file_name="reporte_diario.pdf", mime="application/pdf")
+            st.warning("No hay gráficos disponibles para exportar.")
