@@ -36,7 +36,7 @@ seccion = st.sidebar.radio("", [
     tr["jugador"]
 ])
 
-# — Login sencillo —
+# — Login sencillo corregido —
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -47,7 +47,10 @@ if not st.session_state.logged_in:
     if st.button("Iniciar sesión"):
         ok, msg = login(user, pwd)
         st.session_state.logged_in = ok
-        st.success(msg) if ok else st.error(msg)
+        if ok:
+            st.success(msg)
+        else:
+            st.error(msg)
     st.stop()
 
 # — Estructuras de datos en session_state —
