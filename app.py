@@ -156,6 +156,34 @@ if st.session_state.get("logged_in", False):
             st.session_state.partidas_dia.append(df.copy())
             st.success(tr["guardado"])
 
-    # El resto de las tabs sigue igual
+    # Tab 2: Historial
+    with tab2:
+        if st.session_state.partidas_dia:
+            st.write("### 📚 Historial de partidas")
+            historial_df = pd.concat(st.session_state.partidas_dia, ignore_index=True)
+            st.dataframe(historial_df)
+        else:
+            st.warning("No hay partidas guardadas aún.")
+
+    # Tab 3: Promedio
+    with tab3:
+        if st.session_state.partidas_dia:
+            promedio_df = pd.concat(st.session_state.partidas_dia, ignore_index=True)
+            promedio = promedio_df.mean()
+            st.write("### 📈 Promedio de rendimiento")
+            st.write(promedio)
+        else:
+            st.warning("No hay partidas guardadas aún.")
+
+    # Tab 4: Feedback
+    with tab4:
+        if st.session_state.partidas_dia:
+            feedback_df = pd.concat(st.session_state.partidas_dia, ignore_index=True)
+            st.write("### 🗣️ Feedback")
+            for idx, row in feedback_df.iterrows():
+                st.write(f"Línea: {row['Línea']}")
+                st.write(f"Rendimiento: {row[tr['rendimiento']]} - {row['Feedback']}")
+        else:
+            st.warning("No hay partidas guardadas aún.")
 else:
     st.warning("Por favor, inicia sesión para continuar.")
