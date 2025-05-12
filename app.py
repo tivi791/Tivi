@@ -210,12 +210,23 @@ elif seccion == tr["feedback"]:
             avg = sub["Rendimiento"].mean()
             st.subheader(ln)
 
-            # Visualización con barras
-            bar = int(round(avg))
-            st.progress(bar)
+            # Clamp y manejo de NaN
+            bar = int(round(avg)) if pd.notna(avg) else 0
+            bar = max(0, min(bar, 100))
 
-            # Sugerencias
-            st.write(f"**Sugerencias para mejorar rendimiento en {ln}:**")
+            st.progress(bar)
+            st.write(f"**Rendimiento Promedio:** {round(avg or 0, 2)}%")
             st.write(sugerencias(sub.iloc[-1]))
     else:
-        st.warning("No se han registrado partidas aún.")
+        st.info("Registra al menos una partida")
+
+# — Sección JUGADOR por ROL —
+elif seccion == tr["jugador"]:
+    st.header(tr["jugador"])
+    if st.session_state.partidas:
+        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
+        rendimiento = df_all.groupby("Línea")["Rendimiento"].mean()
+        st.write(rendimiento)
+    else:
+        st.info("Registra al menos una partida")
+
