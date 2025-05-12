@@ -122,3 +122,4 @@ if hj:
         pdf_bytes = exportar_pdf(resumen, hoy)
         st.download_button("Descargar PDF", pdf_bytes,
                            file_name=f"Resumen_{hoy}.pdf", mime="application/pdf")
+
