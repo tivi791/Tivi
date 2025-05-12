@@ -226,12 +226,13 @@ if st.session_state.get("logged_in", False):
             pdf.cell(200, 10, txt=tr["titulo"], ln=True, align="C")
             pdf.ln(10)
 
-            if os.path.exists(grafico_path):
-                pdf.image(grafico_path, x=10, y=50, w=180)
-            if os.path.exists(feedback_path):
-                pdf.image(feedback_path, x=10, y=150, w=180)
+            # Agregar gráficos al PDF
+            pdf.image(grafico_path, x=10, y=30, w=190)
+            pdf.ln(100)
+            pdf.image(feedback_path, x=10, y=30, w=190)
 
-            pdf_output = pdf.output(dest='S')  # No codificar en 'latin1'
-            st.download_button(label=tr["exportar"], data=pdf_output, file_name="reporte_diario.pdf", mime="application/pdf")
+            # Generar PDF en la sesión
+            pdf.output("registro_diario.pdf", "F").encode('latin1') # Codificado en latin1
+            st.download_button(label=tr["exportar"], data=open("registro_diario.pdf", "rb"), file_name="registro_diario.pdf", mime="application/pdf")
         else:
-            st.warning("No hay gráficos disponibles para exportar.")
+            st.warning("No hay suficientes datos para generar el PDF.")
