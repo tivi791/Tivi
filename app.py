@@ -210,25 +210,12 @@ elif seccion == tr["feedback"]:
             avg = sub["Rendimiento"].mean()
             st.subheader(ln)
 
-            # Clamp y manejo de NaN
-            bar = int(round(avg)) if pd.notna(avg) else 0
-            bar = max(0, min(bar, 100))
-
+            # Visualización con barras
+            bar = int(round(avg))
             st.progress(bar)
-            st.write(f"**Rendimiento Promedio:** {round(avg or 0, 2)}%")
+
+            # Sugerencias
+            st.write(f"**Sugerencias para mejorar rendimiento en {ln}:**")
             st.write(sugerencias(sub.iloc[-1]))
     else:
-        st.info("Registra al menos una partida")
-
-# — Sección RENDIMIENTO POR JUGADOR —
-elif seccion == tr["jugador"]:
-    st.header(tr["jugador"])
-    jugador = st.text_input("Nombre del jugador", key="jugador")
-    if jugador:
-        st.write(f"Datos para {jugador}:")
-        if st.session_state.partidas:
-            df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-            df_jugador = df_all[df_all["Comentarios"].str.contains(jugador, na=False)]
-            st.dataframe(df_jugador)
-        else:
-            st.warning("No se han registrado partidas aún.")
+        st.warning("No se han registrado partidas aún.")
