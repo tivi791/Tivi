@@ -124,12 +124,7 @@ if seccion == tr["registro"]:
             a = st.number_input("Asesinatos", 0, step=1, key=f"a_{linea}")
             m = st.number_input("Muertes", 0, step=1, key=f"m_{linea}")
             asi = st.number_input("Asistencias", 0, step=1, key=f"as_{linea}")
-            # multiselect de problemas comunes + otro
-            seleccion = st.multiselect(
-                "Problemas detectados",
-                problemas_comunes,
-                key=f"pc_{linea}"
-            )
+            seleccion = st.multiselect("Problemas detectados", problemas_comunes, key=f"pc_{linea}")
             otro = st.text_input("Otro problema (escribe aquí)", key=f"otro_{linea}")
             comentarios = seleccion.copy()
             if otro:
@@ -165,14 +160,12 @@ elif seccion == tr["promedio"]:
         prom = df_all.groupby("Línea").mean(numeric_only=True).reset_index()
         st.dataframe(prom)
 
-        # Gráfico Altair de valores
         vals = prom.melt("Línea", ["Oro", "Daño Infligido", "Daño Recibido"])
         ch1 = alt.Chart(vals).mark_bar().encode(
             x="Línea", y="value", color="variable"
         ).properties(title="Valores Numéricos", width=600)
         st.altair_chart(ch1, use_container_width=True)
 
-        # Gráfico Altair de porcentajes
         pct = prom.melt("Línea", ["Participación (%)", "Rendimiento"])
         ch2 = alt.Chart(pct).mark_bar().encode(
             x="Línea", y="value", color="variable"
@@ -190,11 +183,8 @@ elif seccion == tr["feedback"]:
             sub = df_all[df_all["Línea"] == ln]
             avg = sub["Rendimiento"].mean()
             st.subheader(ln)
-
-            # Clamp y manejo de NaN
             bar = int(round(avg)) if pd.notna(avg) else 0
             bar = max(0, min(bar, 100))
-
             st.progress(bar)
             st.write(f"**Rendimiento Promedio:** {round(avg or 0, 2)}%")
             st.write(sugerencias(sub.iloc[-1]))
@@ -217,61 +207,15 @@ elif seccion == tr["jugador"]:
     else:
         st.info("No hay datos para graficar")
 
-# — Exportar a HTML corregido con fecha —
+# — Exportar a HTML corregido —
 st.sidebar.markdown("---")
 if st.sidebar.button(tr["exportar"]):
     if st.session_state.partidas:
-        # Fecha de hoy
-        hoy = datetime.now().strftime("%Y-%m-%d")
-        # Consolidar y calcular promedios
         df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        prom = df_all.groupby("Línea").mean(numeric_only=True).reset_index()
-
-        # Gráfico estático
-        fig, ax = plt.subplots(figsize=(8, 4))
-        ax.bar(prom["Línea"], prom["Rendimiento"])
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        fp = "temp_promedio.png"
-        fig.savefig(fp, bbox_inches="tight")
-        plt.close(fig)
-
-        # Convertir imagen a base64
-        with open(fp, "rb") as imgf:
-            img_b64 = base64.b64encode(imgf.read()).decode("utf-8")
-
-        # Construir HTML con fecha
-        html_content = f"""
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <title>Reporte Diario de Rendimiento</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; padding: 20px; }}
-                h1 {{ text-align: center; }}
-                table {{ border-collapse: collapse; width: 100%; margin-bottom: 20px; }}
-                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: center; }}
-                th {{ background-color: #f2f2f2; }}
-                img {{ display: block; margin: 0 auto; }}
-            </style>
-        </head>
-        <body>
-            <h1>Reporte Diario de Rendimiento</h1>
-            <p style="text-align:center;"><strong>Fecha:</strong> {hoy}</p>
-            {prom.to_html(index=False, justify='center')}
-            <h2 style="text-align: center;">{tr['grafico']}</h2>
-            <img src="data:image/png;base64,{img_b64}" width="600" alt="Gráfico Promedio"/>
-        </body>
-        </html>
-        """
-
-        # Botón de descarga
-        st.sidebar.success("HTML generado")
-        st.sidebar.download_button(
-            label="📥 Descargar Reporte HTML",
-            data=html_content,
-            file_name=f"reporte_{hoy}.html",
-            mime="text/html"
-        )
+        hoy = datetime.now().strftime("%Y-%m-%d")
+        html = df_all.to_html(index=False)
+        b64 = base64.b64encode(html.encode()).decode()
+        href = f'<a href="data:text/html;base64,{b64}" download="resumen_{hoy}.html">📥 Descargar HTML</a>'
+        st.sidebar.markdown(href, unsafe_allow_html=True)
     else:
-        st.sidebar.warning("Nada para exportar")
+        st.sidebar.info("No hay datos para exportar.")
