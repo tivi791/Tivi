@@ -12,9 +12,11 @@ import io
 st.set_page_config(page_title="WOLF SEEKERS E-SPORTS", layout="wide")
 st.title("🏆 WOLF SEEKERS E-SPORTS - Registro Diario")
 
+# Usuarios y roles
 USUARIOS = {"Tivi": "2107", "Ghost": "203", "usuario3": "clave3"}
 roles = ["TOPLANER", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
 
+# Inicializar estado
 if "partidas" not in st.session_state:
     st.session_state.partidas = []
 
@@ -25,7 +27,7 @@ def autenticar_usuario(u, c):
     return USUARIOS.get(u) == c
 
 def calificar_desempeno(vals, rol, maximos):
-    pct = lambda v, m: min((v / m)*100, 100) if m else 0
+    pct = lambda v, m: min((v / m) * 100, 100) if m else 0
     names = ["Daño Infligido", "Daño Recibido", "Oro Total", "Participación"]
     percentiles = {n: pct(v, maximos[n]) for n, v in zip(names, vals)}
     umbrales = {
@@ -67,12 +69,12 @@ def exportar_pdf(resumen, fecha):
 # LOGIN
 # ==============================
 st.sidebar.header("🔒 Login")
-user = st.sidebar.text_input("Usuario")
-pwd  = st.sidebar.text_input("Clave", type="password")
+usuario = st.sidebar.text_input("Usuario")
+clave   = st.sidebar.text_input("Clave", type="password")
 if st.sidebar.button("Entrar"):
-    if autenticar_usuario(user, pwd):
-        st.session_state.user = user
-        st.sidebar.success(f"¡Hola {user}!")
+    if autenticar_usuario(usuario, clave):
+        st.session_state.user = usuario
+        st.sidebar.success(f"¡Hola {usuario}!")
     else:
         st.sidebar.error("Credenciales inválidas")
 if "user" not in st.session_state:
@@ -85,19 +87,19 @@ st.header("Registrar Nueva Partida")
 datos = {}
 for rol in roles:
     st.subheader(rol)
-    cols = st.columns(4)
-    dano  = cols[0].number_input("Daño Infligido", min_value=0, key=f"{rol}_d")
-    recv  = cols[1].number_input("Daño Recibido", min_value=0, key=f"{rol}_r")
-    oro   = cols[2].number_input("Oro Total", min_value=0, key=f"{rol}_o")
-    part  = cols[3].number_input("Participación", min_value=0, max_value=100, key=f"{rol}_p")
+    c1, c2, c3, c4 = st.columns(4)
+    dano = c1.number_input("Daño Infligido", min_value=0, key=f"{rol}_d")
+    recv = c2.number_input("Daño Recibido", min_value=0, key=f"{rol}_r")
+    oro  = c3.number_input("Oro Total", min_value=0, key=f"{rol}_o")
+    part = c4.number_input("Participación", min_value=0, max_value=100, key=f"{rol}_p")
     datos[rol] = {"dano": dano, "recibido": recv, "oro": oro, "participacion": part}
 
-coment = st.text_area("Comentario (opcional)")
+comentario = st.text_area("Comentario (opcional)")
 if st.button("Guardar Partida"):
     st.session_state.partidas.append({
         "fecha": datetime.date.today(),
         "datos": datos,
-        "coment": coment
+        "coment": comentario
     })
     st.success("Partida guardada ✔️")
 
@@ -110,16 +112,16 @@ hoy_partidas = [p for p in st.session_state.partidas if p["fecha"] == hoy]
 st.write(f"Partidas hoy: {len(hoy_partidas)}")
 
 if hoy_partidas:
-    # 1) Acumular estadísticas
+    # 1) Acumular y promediar
     acum = defaultdict(lambda: {"dano":0, "recibido":0, "oro":0, "participacion":0})
     for p in hoy_partidas:
         for rol in roles:
             for k, v in p["datos"][rol].items():
                 acum[rol][k] += v
     n = len(hoy_partidas)
-
-    # 2) Calcular promedios y preparar DataFrame
     MAX = {"Daño Infligido":200000, "Daño Recibido":200000, "Oro Total":20000, "Participación":100}
+
+    # 2) Construir DataFrame de promedios
     resumen = {}
     rows = []
     for rol in roles:
@@ -146,7 +148,7 @@ if hoy_partidas:
 
     df = pd.DataFrame(rows)
 
-    # 3) Gráfico de barras agrupadas con Altair
+    # 3) Gráfico de barras agrupadas
     chart = alt.Chart(df).mark_bar().encode(
         x=alt.X("Rol:N", title="Rol"),
         y=alt.Y("Valor:Q", title="Valor Promedio"),
@@ -163,5 +165,4 @@ if hoy_partidas:
     # 5) Exportar a PDF
     if st.button("Exportar PDF"):
         pdf_bytes = exportar_pdf(resumen, hoy)
-        st.download_button("Descargar PDF", pdf_bytes,
-                           file_name=f"Resumen_{hoy}.pdf", mime="application/pdf")
+        st.download_button("Descargar PDF", pdf_bytes, file_name=f"Resumen_{hoy}.pdf", mime="application/pdf")
