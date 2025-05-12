@@ -33,7 +33,7 @@ def calificar_desempeno(valores_norm, rol, maximos):
     """Función para calificar el desempeño"""
     pct = lambda v, m: (v / m) * 100 if m else 0
     names = ["Daño Infligido", "Daño Recibido", "Oro Total", "Participación"]
-    percentiles = {n: pct(v, maximos[n]) for n, v in zip(names, valores_norm)}
+    percentiles = {n: pct(v, maximos.get(n, 1)) for n, v in zip(names, valores_norm)}
 
     umbrales = {
         "TOPLANER": {"Daño Infligido":80, "Oro Total":60, "Participación":60},
@@ -66,7 +66,7 @@ def generar_grafico(datos, titulo, maximos):
     """Generar gráfico radar"""
     categorias = list(datos.keys())
     valores = [datos[c] for c in categorias]
-    valores_norm = [(v / maximos[c])*100 if maximos[c] else 0 for v, c in zip(valores, categorias)]
+    valores_norm = [(v / maximos.get(c, 1)) * 100 for v, c in zip(valores, categorias)]  # Se asegura que 'maximos' tenga un valor por defecto
     valores_norm += valores_norm[:1]
     ang = [n/float(len(categorias))*2*pi for n in range(len(categorias))]
     ang += ang[:1]
@@ -102,15 +102,6 @@ def exportar_pdf(resumen, fecha, equipo="WOLF SEEKERS E-SPORTS"):
             pdf.multi_cell(0, 6, texto)
     return pdf.output(dest='S').encode('latin-1')
 
-def exportar_excel(resumen, fecha):
-    """Generar archivo Excel con el resumen"""
-    df = pd.DataFrame(resumen).T
-    excel_buffer = io.BytesIO()
-    with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
-        df.to_excel(writer, sheet_name=f"Resumen {fecha}")
-    excel_buffer.seek(0)
-    return excel_buffer
-
 # ==============================
 # INICIO DE SESIÓN
 # ==============================
@@ -122,7 +113,7 @@ clave = st.sidebar.text_input("Clave", type="password")
 if st.sidebar.button("Iniciar sesión"):
     if autenticar_usuario(usuario, clave):
         st.session_state.usuario = usuario
-        st.success("¡Bienvenido, " + usuario + "!")
+        st.success("¡Bienvenido, " + usuario + "!")  
     else:
         st.error("Usuario o clave incorrectos")
 
@@ -178,41 +169,26 @@ if "usuario" in st.session_state:
             valores_norm = [promedio["dano"], promedio["recibido"], promedio["oro"], promedio["participacion"]]
             feedback, calif, percentiles = calificar_desempeno(valores_norm, rol, maximos)
             resumen[rol] = {
-                "Daño Infligido Promedio": promedio["dano"],
-                "Daño Recibido Promedio": promedio["recibido"],
-                "Oro Total Promedio": promedio["oro"],
-                "Participación Promedio": promedio["participacion"],
+                "Promedio Daño Infligido": promedio["dano"],
+                "Promedio Daño Recibido": promedio["recibido"],
+                "Promedio Oro Total": promedio["oro"],
+                "Promedio Participación": promedio["participacion"],
                 "Calificación": calif,
-                "Feedback": feedback
+                "Feedback": feedback,
             }
+            
+            st.write(f"### {rol}")
+            st.write(f"Promedio Daño Infligido: {promedio['dano']}")
+            st.write(f"Promedio Daño Recibido: {promedio['recibido']}")
+            st.write(f"Promedio Oro Total: {promedio['oro']}")
+            st.write(f"Promedio Participación: {promedio['participacion']}")
+            st.write(f"Calificación: {calif}")
+            st.write(f"Feedback: {feedback}")
+            
+            st.write("#### Gráfico")
+            buf = generar_grafico(percentiles, rol, maximos)
+            st.image(buf)
 
-            # Mostrar gráfico radar
-            st.subheader(rol)
-            st.write(resumen[rol])
-            st.pyplot(generar_grafico(resumen[rol], f"Desempeño {rol}", maximos))
-
-        # Opciones de exportación
-        st.download_button(
-            label="Descargar Resumen en PDF",
-            data=exportar_pdf(resumen, hoy),
-            file_name=f"Resumen_{hoy}.pdf",
-            mime="application/pdf"
-        )
-
-        st.download_button(
-            label="Descargar Resumen en Excel",
-            data=exportar_excel(resumen, hoy),
-            file_name=f"Resumen_{hoy}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
-# ==============================
-# ESTILOS PERSONALIZADOS
-# ==============================
-st.markdown("""
-<style>
-body, .css-1d391kg { background-color: #0a0a0a; color: white; }
-.stButton>button { background-color: #FFD700; color: black; font-weight: bold; }
-input, .stNumberInput input { background-color: #1e1e1e; color: white; }
-</style>
-""", unsafe_allow_html=True)
+        if st.button("Generar PDF"):
+            pdf_bytes = exportar_pdf(resumen, hoy)
+            st.download_button("Descargar PDF", data=pdf_bytes, file_name="Resumen_Diario.pdf", mime="application/pdf")
