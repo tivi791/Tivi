@@ -238,25 +238,15 @@ if st.session_state.get("logged_in", False):
             for index, row in df.iterrows():
                 pdf.cell(200, 10, txt=f"Línea: {row['Línea']} - {tr['rendimiento']}: {row[tr['rendimiento']]}%", ln=True)
                 pdf.cell(200, 10, txt=f"Feedback: {row['Feedback']}", ln=True)
-                pdf.cell(200, 10, txt=f"Oro: {row['Oro']}, Daño Infligido: {row['Daño Infligido']}, Daño Recibido: {row['Daño Recibido']}, Participación: {row['Participación (%)']}%", ln=True)
-                pdf.cell(200, 10, txt=f"Asesinatos: {row['Asesinatos']}, Muertes: {row['Muertes']}, Asistencias: {row['Asistencias']}", ln=True)
                 pdf.ln(5)
-
-        # Añadir gráficos
+        
+        # Guardar gráfico
         if grafico_path:
-            pdf.add_page()
-            pdf.cell(200, 10, txt=tr["grafico"], ln=True, align="C")
-            pdf.ln(5)
-            pdf.image(grafico_path, x=10, y=30, w=190)
-
-        # Añadir feedback gráfico
-        if feedback_path:
-            pdf.add_page()
-            pdf.cell(200, 10, txt=tr["feedback"], ln=True, align="C")
-            pdf.ln(5)
-            pdf.image(feedback_path, x=10, y=30, w=190)
-
-        # Guardar el PDF
-        pdf_output_path = "Informe_Rendimiento_Wolf_Seekers.pdf"
+            pdf.image(grafico_path, x=10, y=pdf.get_y(), w=180)
+            pdf.ln(85)  # Ajustar la altura del gráfico en el PDF
+        
+        # Descargar PDF
+        pdf_output_path = "Informe_Wolf_Seekers.pdf"
         pdf.output(pdf_output_path)
-        st.success("¡PDF generado con éxito!")
+        st.success("Informe generado correctamente. Puedes descargarlo.")
+        st.download_button("Descargar PDF", pdf_output_path)
