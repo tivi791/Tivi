@@ -86,6 +86,7 @@ pesos = {
 }
 
 # — Funciones centrales —
+
 def calcular_puntaje(fila):
     rol = fila["Línea"]
     p = pesos[rol]
@@ -102,33 +103,48 @@ def calcular_puntaje(fila):
     return round(eficiencia * 100, 2)
 
 def sugerencias(fila):
-    msgs = []
-    
+    # Feedback multidimensional
+    feedback = {
+        "Farmeo": [],
+        "Visión": [],
+        "Posicionamiento": [],
+        "Objetivos": [],
+        "Teamfights": [],
+        "Comunicación": []
+    }
     # Farmeo
     if fila["Daño Infligido"] < 20000:
-        msgs.append("🔸 Aumenta tu farmeo y participa en peleas tempranas. **(Prioridad Alta)**")
-    
+        feedback["Farmeo"].append("🔸 Aumenta tu farmeo y participa en peleas tempranas.")
     # Visión
-    if fila["Daño Recibido"] > 20000 and fila["Participación (%)"] < 50:
-        msgs.append("🔸 Mejora la visión y la colocación de wards para evitar sorpresas. **(Prioridad Media)**")
-    
+    if fila["Participación (%)"] < 50:
+        feedback["Visión"].append("🔸 Sé más activo en objetivos de equipo.")
     # Posicionamiento
     if (fila["Asesinatos"] + fila["Asistencias"]) / max(1, fila["Muertes"]) < 1:
-        msgs.append("🔸 Mejora tu posicionamiento para no morir tanto. **(Prioridad Alta)**")
+        feedback["Posicionamiento"].append("🔸 Mejora tu posicionamiento para no morir tanto.")
+    # Otros
+    feedback["Objetivos"].append("🔸 Sé más eficiente en los objetivos.")
+    feedback["Teamfights"].append("🔸 Coordina mejor tus teamfights.")
+    feedback["Comunicación"].append("🔸 Mantén una mejor comunicación con el equipo.")
+
+    # Asignar prioridad
+    prioridades = {
+        "Farmeo": "Alta",
+        "Visión": "Alta",
+        "Posicionamiento": "Alta",
+        "Objetivos": "Media",
+        "Teamfights": "Media",
+        "Comunicación": "Baja"
+    }
+
+    # Construir las sugerencias
+    suggestions_text = ""
+    for area, msgs in feedback.items():
+        if msgs:
+            suggestions_text += f"**{area} ({prioridades[area]}):**\n"
+            for msg in msgs:
+                suggestions_text += f"  {msg}\n"
     
-    # Objetivos
-    if fila["Participación (%)"] < 50:
-        msgs.append("🔸 Sé más activo en objetivos de equipo. **(Prioridad Alta)**")
-    
-    # Teamfights
-    if fila["Participación (%)"] > 30 and fila["Asesinatos"] < 3:
-        msgs.append("🔸 Participa más activamente en las teamfights. **(Prioridad Baja)**")
-    
-    # Comunicación
-    if fila["Asistencias"] < 2:
-        msgs.append("🔸 Mantén mejor comunicación con el equipo y sigue las estrategias. **(Prioridad Media)**")
-    
-    return "\n".join(msgs) or "✅ Buen equilibrio de métricas."
+    return suggestions_text if suggestions_text else "✅ Buen equilibrio de métricas."
 
 # — Sección REGISTRO —
 if seccion == tr["registro"]:
@@ -187,46 +203,16 @@ elif seccion == tr["promedio"]:
         # Gráfico Altair de valores
         vals = prom.melt("Línea", ["Oro", "Daño Infligido", "Daño Recibido"])
         ch1 = alt.Chart(vals).mark_bar().encode(
-            x="Línea", y="value", color="variable"
-        ).properties(title="Valores Numéricos", width=600)
+            x="variable:N",
+            y="value:Q",
+            color="Línea:N",
+            column="Línea:N"
+        ).properties(width=100)
         st.altair_chart(ch1, use_container_width=True)
-
-        # Gráfico Altair de porcentajes
-        pct = prom.melt("Línea", ["Participación (%)", "Rendimiento"])
-        ch2 = alt.Chart(pct).mark_bar().encode(
-            x="Línea", y="value", color="variable"
-        ).properties(title="Porcentajes", width=600)
-        st.altair_chart(ch2, use_container_width=True)
     else:
-        st.info("No hay datos para calcular promedio")
+        st.info("No hay partidas registradas")
 
-# — Sección FEEDBACK DETALLADO —
+# — Sección Feedback —
 elif seccion == tr["feedback"]:
     st.header(tr["feedback"])
-    if st.session_state.partidas:
-        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        for ln in lineas:
-            sub = df_all[df_all["Línea"] == ln]
-            avg = sub["Rendimiento"].mean()
-            st.subheader(ln)
-
-            # Clamp y manejo de NaN
-            bar = int(round(avg)) if pd.notna(avg) else 0
-            bar = max(0, min(bar, 100))
-
-            st.progress(bar)
-            st.write(f"**Rendimiento Promedio:** {round(avg or 0, 2)}%")
-            st.write(sugerencias(sub.iloc[-1]))
-    else:
-        st.info("Registra al menos una partida")
-
-# — Sección JUGADOR por ROL —
-elif seccion == tr["jugador"]:
-    st.header(tr["jugador"])
-    if st.session_state.partidas:
-        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        rendimiento = df_all.groupby("Línea")["Rendimiento"].mean()
-        st.write(rendimiento)
-    else:
-        st.info("Registra al menos una partida")
-
+    st.write(sugerencias({"Oro": 1500, "Daño Infligido": 15000, "Participación (%)": 60, "Asesinatos": 10, "Muertes": 5, "Asistencias": 8, "Línea": "TOPLANER"}))
