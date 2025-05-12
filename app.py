@@ -3,6 +3,7 @@ import pandas as pd
 import altair as alt
 import matplotlib.pyplot as plt
 import base64
+from datetime import datetime
 
 # — Diccionario de usuarios y contraseñas —
 USUARIOS = {"Tivi": "2107", "Ghost": "203"}
@@ -62,6 +63,19 @@ if "contador" not in st.session_state:
 
 lineas = ["TOPLANER", "JUNGLA", "MIDLANER", "ADC", "SUPPORT"]
 
+# — Lista de problemas comunes para comentarios —
+problemas_comunes = [
+    "Poco farmeo",
+    "Mala visión / wards",
+    "Mal posicionamiento",
+    "Falta de roaming",
+    "Objetivos ignorados",
+    "Mal tradeo en línea",
+    "No seguimiento de ganks",
+    "Falta de comunicación",
+    "Teamfights descoordinadas"
+]
+
 # — Pesos por rol para el cálculo de puntaje —
 pesos = {
     "TOPLANER": {"oro":0.2, "dano":0.3, "part":0.2, "kda":0.3},
@@ -110,12 +124,21 @@ if seccion == tr["registro"]:
             a = st.number_input("Asesinatos", 0, step=1, key=f"a_{linea}")
             m = st.number_input("Muertes", 0, step=1, key=f"m_{linea}")
             asi = st.number_input("Asistencias", 0, step=1, key=f"as_{linea}")
-            com = st.text_area("Comentarios", key=f"com_{linea}")
+            # multiselect de problemas comunes + otro
+            seleccion = st.multiselect(
+                "Problemas detectados",
+                problemas_comunes,
+                key=f"pc_{linea}"
+            )
+            otro = st.text_input("Otro problema (escribe aquí)", key=f"otro_{linea}")
+            comentarios = seleccion.copy()
+            if otro:
+                comentarios.append(f"Otro: {otro}")
             datos.append({
                 "Línea": linea, "Oro": oro, "Daño Infligido": dano,
                 "Daño Recibido": rec, "Participación (%)": part,
                 "Asesinatos": a, "Muertes": m, "Asistencias": asi,
-                "Comentarios": com
+                "Comentarios": "; ".join(comentarios)
             })
     if st.button(tr["guardar"]):
         df = pd.DataFrame(datos)
@@ -194,15 +217,17 @@ elif seccion == tr["jugador"]:
     else:
         st.info("No hay datos para graficar")
 
-# — Exportar a HTML corregido —
+# — Exportar a HTML corregido con fecha —
 st.sidebar.markdown("---")
 if st.sidebar.button(tr["exportar"]):
     if st.session_state.partidas:
+        # Fecha de hoy
+        hoy = datetime.now().strftime("%Y-%m-%d")
         # Consolidar y calcular promedios
         df_all = pd.concat(st.session_state.partidas, ignore_index=True)
         prom = df_all.groupby("Línea").mean(numeric_only=True).reset_index()
 
-        # Generar gráfico estático
+        # Gráfico estático
         fig, ax = plt.subplots(figsize=(8, 4))
         ax.bar(prom["Línea"], prom["Rendimiento"])
         plt.xticks(rotation=45)
@@ -215,7 +240,7 @@ if st.sidebar.button(tr["exportar"]):
         with open(fp, "rb") as imgf:
             img_b64 = base64.b64encode(imgf.read()).decode("utf-8")
 
-        # Construir HTML
+        # Construir HTML con fecha
         html_content = f"""
         <html>
         <head>
@@ -231,7 +256,8 @@ if st.sidebar.button(tr["exportar"]):
             </style>
         </head>
         <body>
-            <h1>{tr['promedio']}</h1>
+            <h1>Reporte Diario de Rendimiento</h1>
+            <p style="text-align:center;"><strong>Fecha:</strong> {hoy}</p>
             {prom.to_html(index=False, justify='center')}
             <h2 style="text-align: center;">{tr['grafico']}</h2>
             <img src="data:image/png;base64,{img_b64}" width="600" alt="Gráfico Promedio"/>
@@ -244,7 +270,7 @@ if st.sidebar.button(tr["exportar"]):
         st.sidebar.download_button(
             label="📥 Descargar Reporte HTML",
             data=html_content,
-            file_name="reporte_diario.html",
+            file_name=f"reporte_{hoy}.html",
             mime="text/html"
         )
     else:
