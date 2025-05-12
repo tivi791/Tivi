@@ -9,7 +9,7 @@ USUARIOS = {"Tivi": "2107", "Ghost": "203"}
 def login(username, password):
     if username in USUARIOS:  # Verificar si el usuario existe
         if USUARIOS[username] == password:  # Verificar la contraseña
-            return True
+            return True, "Inicio de sesión exitoso!"  # Mensaje exitoso
         else:
             return False, "Contraseña incorrecta"
     else:
@@ -87,14 +87,13 @@ if st.button("Iniciar sesión"):
     success, message = login(username, password)
     if success:
         st.session_state.logged_in = True
-        st.success("Inicio de sesión exitoso!")
+        st.success(message)
     else:
         st.session_state.logged_in = False
         st.error(f"Error: {message}")
 
 if st.session_state.get("logged_in", False):
     # Aquí va el resto de tu código si el login es exitoso
-    st.title(tr["titulo"])
     lineas = ["TOPLANER", "JUNGLA", "MIDLANER", "ADC", "SUPPORT"]
     datos = []
 
