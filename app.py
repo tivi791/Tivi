@@ -103,39 +103,13 @@ def calcular_puntaje(fila):
 
 def sugerencias(fila):
     msgs = []
-    
-    # Farmeo
     if fila["Daño Infligido"] < 20000:
-        msgs.append("🔸 Aumenta tu farmeo y participa en peleas tempranas. **(Prioridad Alta)**")
-    
-    # Visión
-    if fila["Daño Recibido"] > 20000 and fila["Participación (%)"] < 50:
-        msgs.append("🔸 Mejora la visión y la colocación de wards para evitar sorpresas. **(Prioridad Media)**")
-    
-    # Posicionamiento
-    if (fila["Asesinatos"] + fila["Asistencias"]) / max(1, fila["Muertes"]) < 1:
-        msgs.append("🔸 Mejora tu posicionamiento para no morir tanto. **(Prioridad Alta)**")
-    
-    # Objetivos
+        msgs.append("🔸 Aumenta tu farmeo y participa en peleas tempranas.")
     if fila["Participación (%)"] < 50:
-        msgs.append("🔸 Sé más activo en objetivos de equipo. **(Prioridad Alta)**")
-    
-    # Teamfights
-    if fila["Participación (%)"] > 30 and fila["Asesinatos"] < 3:
-        msgs.append("🔸 Participa más activamente en las teamfights. **(Prioridad Baja)**")
-    
-    # Comunicación
-    if fila["Asistencias"] < 2:
-        msgs.append("🔸 Mantén mejor comunicación con el equipo y sigue las estrategias. **(Prioridad Media)**")
-    
+        msgs.append("🔸 Sé más activo en objetivos de equipo.")
+    if (fila["Asesinatos"] + fila["Asistencias"]) / max(1, fila["Muertes"]) < 1:
+        msgs.append("🔸 Mejora tu posicionamiento para no morir tanto.")
     return "\n".join(msgs) or "✅ Buen equilibrio de métricas."
-
-# — Función de exportación a HTML —
-def exportar_html(df):
-    html = df.to_html(index=False)
-    b64 = base64.b64encode(html.encode()).decode()
-    href = f'<a href="data:file/html;base64,{b64}" download="registro_partidas.html">Haz clic aquí para descargar el archivo HTML</a>'
-    return href
 
 # — Sección REGISTRO —
 if seccion == tr["registro"]:
@@ -180,9 +154,6 @@ elif seccion == tr["historial"]:
     if st.session_state.partidas:
         hist = pd.concat(st.session_state.partidas, ignore_index=True)
         st.dataframe(hist)
-        
-        # Mostrar enlace de descarga
-        st.markdown(exportar_html(hist), unsafe_allow_html=True)
     else:
         st.info("No hay partidas registradas")
 
@@ -226,6 +197,81 @@ elif seccion == tr["feedback"]:
 
             st.progress(bar)
             st.write(f"**Rendimiento Promedio:** {round(avg or 0, 2)}%")
-            st.write(sugerencias(sub.iloc[0]))
+            st.write(sugerencias(sub.iloc[-1]))
     else:
-        st.info("No hay partidas para revisar")
+        st.info("Registra al menos una partida")
+
+# — Sección RENDIMIENTO POR JUGADOR —
+elif seccion == tr["jugador"]:
+    st.header(tr["jugador"])
+    if st.session_state.partidas:
+        seleccionado = st.selectbox("Selecciona línea", lineas)
+        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
+        df_line = df_all[df_all["Línea"] == seleccionado]
+        fig, ax = plt.subplots()
+        ax.plot(df_line["Partida"], df_line["Rendimiento"], marker='o')
+        ax.set_title(f"Rendimiento {seleccionado}")
+        ax.set_ylim(0, 100)
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
+    else:
+        st.info("No hay datos para graficar")
+
+# — Exportar a HTML corregido con fecha —
+st.sidebar.markdown("---")
+if st.sidebar.button(tr["exportar"]):
+    if st.session_state.partidas:
+        # Fecha de hoy
+        hoy = datetime.now().strftime("%Y-%m-%d")
+        # Consolidar y calcular promedios
+        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
+        prom = df_all.groupby("Línea").mean(numeric_only=True).reset_index()
+
+        # Gráfico estático
+        fig, ax = plt.subplots(figsize=(8, 4))
+        ax.bar(prom["Línea"], prom["Rendimiento"])
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        fp = "temp_promedio.png"
+        fig.savefig(fp, bbox_inches="tight")
+        plt.close(fig)
+
+        # Convertir imagen a base64
+        with open(fp, "rb") as imgf:
+            img_b64 = base64.b64encode(imgf.read()).decode("utf-8")
+
+        # Construir HTML con fecha
+        html_content = f"""
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Reporte Diario de Rendimiento</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; padding: 20px; }}
+                h1 {{ text-align: center; }}
+                table {{ border-collapse: collapse; width: 100%; margin-bottom: 20px; }}
+                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: center; }}
+                th {{ background-color: #f2f2f2; }}
+                img {{ display: block; margin: 0 auto; }}
+            </style>
+        </head>
+        <body>
+            <h1>Reporte Diario de Rendimiento</h1>
+            <p style="text-align:center;"><strong>Fecha:</strong> {hoy}</p>
+            {prom.to_html(index=False, justify='center')}
+            <h2 style="text-align: center;">{tr['grafico']}</h2>
+            <img src="data:image/png;base64,{img_b64}" width="600" alt="Gráfico Promedio"/>
+        </body>
+        </html>
+        """
+
+        # Botón de descarga
+        st.sidebar.success("HTML generado")
+        st.sidebar.download_button(
+            label="📥 Descargar Reporte HTML",
+            data=html_content,
+            file_name=f"reporte_{hoy}.html",
+            mime="text/html"
+        )
+    else:
+        st.sidebar.warning("Nada para exportar")
