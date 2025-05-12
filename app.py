@@ -227,52 +227,36 @@ if st.session_state.get("logged_in", False):
         pdf = FPDF()
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
-        pdf.set_font("Arial", "B", 16)
-        pdf.cell(0, 10, tr["titulo"], ln=True)
-
-        def add_table_to_pdf(title, df):
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(0, 10, title, ln=True)
-            pdf.set_font("Arial", "", 10)
-            for i in range(len(df)):
-                row = df.iloc[i].astype(str).values
-                row_str = " | ".join(row)
-                pdf.multi_cell(0, 6, row_str)
-
+        pdf.set_font("Arial", size=12)
+        
+        pdf.cell(200, 10, txt=tr["titulo"], ln=True, align="C")
+        
+        # Información de la tabla
         if not df.empty:
-            add_table_to_pdf(tr["registro"], df)
+            pdf.cell(200, 10, txt=tr["registro"], ln=True)
+            pdf.ln(5)  # Salto de línea
+            for index, row in df.iterrows():
+                pdf.cell(200, 10, txt=f"Línea: {row['Línea']} - {tr['rendimiento']}: {row[tr['rendimiento']]}%", ln=True)
+                pdf.cell(200, 10, txt=f"Feedback: {row['Feedback']}", ln=True)
+                pdf.cell(200, 10, txt=f"Oro: {row['Oro']}, Daño Infligido: {row['Daño Infligido']}, Daño Recibido: {row['Daño Recibido']}, Participación: {row['Participación (%)']}%", ln=True)
+                pdf.cell(200, 10, txt=f"Asesinatos: {row['Asesinatos']}, Muertes: {row['Muertes']}, Asistencias: {row['Asistencias']}", ln=True)
+                pdf.ln(5)
 
-        if not historial_df.empty:
-            add_table_to_pdf(tr["historial"], historial_df)
-
-        if not promedio.empty:
-            add_table_to_pdf(tr["promedio"], promedio)
-
+        # Añadir gráficos
         if grafico_path:
             pdf.add_page()
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(0, 10, tr["grafico"], ln=True)
-            pdf.image(grafico_path, w=180)
+            pdf.cell(200, 10, txt=tr["grafico"], ln=True, align="C")
+            pdf.ln(5)
+            pdf.image(grafico_path, x=10, y=30, w=190)
 
-        if not feedback_df.empty:
-            add_table_to_pdf(tr["feedback"], feedback_df[["Línea", tr["rendimiento"], "Feedback"]])
-
+        # Añadir feedback gráfico
         if feedback_path:
             pdf.add_page()
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(0, 10, "Resumen de Feedback", ln=True)
-            pdf.image(feedback_path, w=180)
+            pdf.cell(200, 10, txt=tr["feedback"], ln=True, align="C")
+            pdf.ln(5)
+            pdf.image(feedback_path, x=10, y=30, w=190)
 
-        output_path = "informe_tracker.pdf"
-        pdf.output(output_path)
-        with open(output_path, "rb") as f:
-            st.download_button("📄 Descargar PDF", f, file_name="informe_tracker.pdf", mime="application/pdf")
-
-        # Limpieza
-        if grafico_path and os.path.exists(grafico_path):
-            os.remove(grafico_path)
-        if feedback_path and os.path.exists(feedback_path):
-            os.remove(feedback_path)
-
-else:
-    st.warning("Por favor, inicia sesión para continuar.")
+        # Guardar el PDF
+        pdf_output_path = "Informe_Rendimiento_Wolf_Seekers.pdf"
+        pdf.output(pdf_output_path)
+        st.success("¡PDF generado con éxito!")
