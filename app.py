@@ -221,32 +221,15 @@ if st.session_state.get("logged_in", False):
             feedback_path = None
             st.write("No hay partidas para generar retroalimentación.")
 
-    # Exportar a PDF
-    st.markdown("## 📤 Exportar informe profesional")
-    if st.button(tr["exportar"]):
+    with open("reporte_diario.pdf", "wb") as pdf_file:
         pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        
         pdf.cell(200, 10, txt=tr["titulo"], ln=True, align="C")
-        
-        # Información de la tabla
-        if not df.empty:
-            pdf.cell(200, 10, txt=tr["registro"], ln=True)
-            pdf.ln(5)  # Salto de línea
-            for index, row in df.iterrows():
-                pdf.cell(200, 10, txt=f"Línea: {row['Línea']} - {tr['rendimiento']}: {row[tr['rendimiento']]}%", ln=True)
-                pdf.cell(200, 10, txt=f"Feedback: {row['Feedback']}", ln=True)
-                pdf.ln(5)
-        
-        # Guardar gráfico
-        if grafico_path:
-            pdf.image(grafico_path, x=10, y=pdf.get_y(), w=180)
-            pdf.ln(85)  # Ajustar la altura del gráfico en el PDF
-        
-        # Descargar PDF
-        pdf_output_path = "Informe_Wolf_Seekers.pdf"
-        pdf.output(pdf_output_path)
-        st.success("Informe generado correctamente. Puedes descargarlo.")
-        st.download_button("Descargar PDF", pdf_output_path)
+        pdf.ln(10)
+
+        if "grafico_feedback.png" in os.listdir():
+            pdf.image("grafico_feedback.png", x=10, y=50, w=180)
+
+        pdf_output = pdf.output(dest='S').encode('latin1')
+        st.download_button(label=tr["exportar"], data=pdf_output, file_name="reporte_diario.pdf", mime="application/pdf")
