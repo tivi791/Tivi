@@ -4,184 +4,175 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 from math import pi
 from fpdf import FPDF
-import pandas as pd
 import io
-import base64
 
-# =============================
+# ==============================
 # CONFIGURACIÓN Y SESIÓN
-# =============================
+# ==============================
 st.set_page_config(page_title="WOLF SEEKERS E-SPORTS", layout="wide")
-st.title("\U0001F3C6 WOLF SEEKERS E-SPORTS - Registro Diario")
+st.title("🏆 WOLF SEEKERS E-SPORTS - Registro Diario")
 
+# Datos de autenticación
 USUARIOS = {"Tivi": "2107", "Ghost": "203", "usuario3": "clave3"}
 roles = ["TOPLANER", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
 
+# Inicializar estado
 if "partidas" not in st.session_state:
     st.session_state.partidas = []
 
-# =============================
+# ==============================
 # FUNCIONES
-# =============================
+# ==============================
 def autenticar_usuario(usuario, clave):
     return USUARIOS.get(usuario) == clave
 
-def calificar_desempeno(valores_norm, rol, maximos):
-    pct = lambda v, m: (v / m) * 100 if m else 0
+def calificar_desempeno(valores, rol, maximos):
+    # valores: [dano, recibido, oro, participacion]
+    pct = lambda v, m: min((v / m) * 100, 100) if m else 0
     names = ["Daño Infligido", "Daño Recibido", "Oro Total", "Participación"]
-    percentiles = {n: pct(v, maximos[n]) for n, v in zip(names, valores_norm)}
+    percentiles = {n: pct(v, maximos[n]) for n, v in zip(names, valores)}
 
     umbrales = {
-        "TOPLANER": {"Daño Infligido":80, "Oro Total":60, "Participación":60},
-        "JUNGLER": {"Daño Infligido":85, "Oro Total":70, "Participación":60},
-        "MIDLANER": {"Daño Infligido":85, "Oro Total":70, "Participación":60},
-        "ADCARRY": {"Daño Infligido":90, "Oro Total":70, "Participación":60},
-        "SUPPORT": {"Daño Infligido":60, "Oro Total":50, "Participación":70},
+        "TOPLANER":    {"Daño Infligido":80, "Oro Total":60, "Participación":60},
+        "JUNGLER":     {"Daño Infligido":85, "Oro Total":70, "Participación":60},
+        "MIDLANER":    {"Daño Infligido":85, "Oro Total":70, "Participación":60},
+        "ADCARRY":     {"Daño Infligido":90, "Oro Total":70, "Participación":60},
+        "SUPPORT":     {"Daño Infligido":60, "Oro Total":50, "Participación":70},
     }
 
     mejoras = []
     for métrica, pct_val in percentiles.items():
-        if métrica in umbrales[rol] and pct_val < umbrales[rol][métrica]:
+        if pct_val < umbrales[rol].get(métrica, 0):
             if métrica == "Daño Infligido":
-                mejoras.append("Aumenta tu daño infligido: mejora tu farmeo y presiona más en línea.")
+                mejoras.append("Mejora tu farmeo y presiona más en línea.")
             if métrica == "Oro Total":
-                mejoras.append("Optimiza tu farmeo de minions y objetivos para mejorar tu oro.")
+                mejoras.append("Optimiza tu farmeo de minions y objetivos.")
             if métrica == "Participación":
                 mejoras.append("Participa más en peleas de equipo y visión del mapa.")
 
     if not mejoras:
-        mensaje = f"Excelente desempeño como {rol}. Sigue manteniendo tu nivel alto en todas las métricas."
-        cal = "Excelente"
+        return f"Excelente desempeño como {rol}.", "Excelente", percentiles
     else:
-        mensaje = f"Áreas de mejora como {rol}:
-- " + "\n- ".join(mejoras)
-        cal = "Bajo"
+        texto = "Áreas de mejora:\n- " + "\n- ".join(mejoras)
+        return texto, "Bajo", percentiles
 
-    return mensaje, cal, percentiles
-
-def generar_grafico(datos, titulo, maximos=None):
-    """Generar gráfico radar usando percentiles (0-100)"""
-    categorias = list(datos.keys())
-    # datos ya en percentiles 0-100
-    valores_norm = [datos[c] for c in categorias]
-    # cerrar el polígono
-    valores_norm += valores_norm[:1]
+def generar_grafico(percentiles, rol, maximos):
+    categorias = list(percentiles.keys())
+    valores = list(percentiles.values())
+    valores += valores[:1]
     ang = [n/float(len(categorias))*2*pi for n in range(len(categorias))]
     ang += ang[:1]
 
-    fig, ax = plt.subplots(figsize=(6,6), subplot_kw=dict(polar=True))
-    ax.plot(ang, valores_norm, color='#FFD700', linewidth=2)
-    ax.fill(ang, valores_norm, color='#FFD700', alpha=0.3)
+    fig, ax = plt.subplots(figsize=(5,5), subplot_kw=dict(polar=True))
+    ax.plot(ang, valores, color='#FFD700', linewidth=2)
+    ax.fill(ang, valores, color='#FFD700', alpha=0.3)
     ax.set_xticks(ang[:-1])
-    ax.set_xticklabels(categorias, color='white', fontsize=12)
+    ax.set_xticklabels(categorias, color='white', fontsize=10)
     ax.set_yticks([20,40,60,80,100])
     ax.set_yticklabels(['20%','40%','60%','80%','100%'], color='grey', size=8)
     ax.set_ylim(0,100)
-    ax.set_title(titulo, color='white')
-
+    ax.set_title(f"{rol}", color='white')
     buf = io.BytesIO()
     plt.savefig(buf, format='png', bbox_inches='tight', facecolor='#0a0a0a')
-    buf.seek(0)
     plt.close(fig)
+    buf.seek(0)
     return buf
 
-def exportar_pdf(resumen, fecha, equipo="WOLF SEEKERS E-SPORTS"):
+def exportar_pdf(resumen, fecha):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.set_font("Arial", size=12)
     pdf.cell(0, 10, f"Resumen Diario - {fecha}", ln=True, align="C")
-    pdf.cell(0, 10, f"Equipo: {equipo}", ln=True, align="C")
     for rol, datos in resumen.items():
-        pdf.ln(8)
+        pdf.ln(5)
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(0, 8, rol, ln=True)
         pdf.set_font("Arial", size=11)
-        for k, v in datos.items():
-            texto = f"{k}: {v}"
-            texto = texto.encode('latin-1', 'ignore').decode('latin-1')
-            pdf.multi_cell(0, 6, texto)
+        for k,v in datos.items():
+            line = f"{k}: {v}"
+            pdf.multi_cell(0, 6, line)
     return pdf.output(dest='S').encode('latin-1')
 
-# =============================
-# REGISTRO PARTIDA
-# =============================
-st.header("Registrar Nueva Partida")
-nueva_partida = {}
+# ==============================
+# LAYOUT
+# ==============================
+# Login
+st.sidebar.header("🔒 Inicio de Sesión")
+u = st.sidebar.text_input("Usuario")
+c = st.sidebar.text_input("Contraseña", type="password")
+if st.sidebar.button("Entrar"):
+    if autenticar_usuario(u,c):
+        st.session_state.user = u
+        st.sidebar.success(f"Bienvenido, {u}!")
+    else:
+        st.sidebar.error("Credenciales inválidas")
 
+if "user" not in st.session_state:
+    st.stop()
+
+# Registro de partidas
+st.header("Registrar Nueva Partida")
+datos = {}
 for rol in roles:
     st.subheader(rol)
-    dano = st.number_input(f"Daño Infligido ({rol})", min_value=0)
-    recibido = st.number_input(f"Daño Recibido ({rol})", min_value=0)
-    oro = st.number_input(f"Oro Total ({rol})", min_value=0)
-    participacion = st.number_input(f"Participación ({rol})", min_value=0)
-    nueva_partida[rol] = {"dano": dano, "recibido": recibido, "oro": oro, "participacion": participacion}
+    cols = st.columns(4)
+    dano = cols[0].number_input("Daño Infligido", min_value=0, key=f"{rol}_d")
+    recibido = cols[1].number_input("Daño Recibido", min_value=0, key=f"{rol}_r")
+    oro = cols[2].number_input("Oro Total", min_value=0, key=f"{rol}_o")
+    part = cols[3].number_input("Participación", min_value=0, max_value=100, key=f"{rol}_p")
+    datos[rol] = {"dano":dano, "recibido":recibido, "oro":oro, "participacion":part}
 
-comentario = st.text_area("Comentario del equipo sobre esta partida (opcional)")
-
+comentario = st.text_area("Comentario (opcional)")
 if st.button("Guardar Partida"):
-    st.session_state.partidas.append({"fecha": datetime.date.today(), "datos": nueva_partida, "comentario": comentario})
+    st.session_state.partidas.append({
+        "fecha": datetime.date.today(),
+        "datos": datos,
+        "comentario": comentario
+    })
     st.success("Partida guardada ✔️")
 
-# =============================
-# RESUMEN DIARIO
-# =============================
+# Resumen diario
 st.header("Resumen Diario")
 hoy = datetime.date.today()
-hoy_partidas = [p for p in st.session_state.partidas if p["fecha"] == hoy]
+hoy_partidas = [p for p in st.session_state.partidas if p["fecha"]==hoy]
 st.write(f"Partidas hoy: {len(hoy_partidas)}")
 
 if hoy_partidas:
-    acumulado = defaultdict(lambda: {"dano": 0, "recibido": 0, "oro": 0, "participacion": 0})
-
-    for partida in hoy_partidas:
+    acumulado = defaultdict(lambda: {"dano":0,"recibido":0,"oro":0,"participacion":0})
+    for p in hoy_partidas:
         for rol in roles:
-            datos = partida["datos"][rol]
-            acumulado[rol]["dano"] += datos["dano"]
-            acumulado[rol]["recibido"] += datos["recibido"]
-            acumulado[rol]["oro"] += datos["oro"]
-            acumulado[rol]["participacion"] += datos["participacion"]
+            d = p["datos"][rol]
+            acumulado[rol]["dano"] += d["dano"]
+            acumulado[rol]["recibido"] += d["recibido"]
+            acumulado[rol]["oro"] += d["oro"]
+            acumulado[rol]["participacion"] += d["participacion"]
 
     resumen = {}
+    MAXIMOS = {"Daño Infligido":200000,"Daño Recibido":200000,"Oro Total":20000,"Participación":100}
     for rol in roles:
         stats = acumulado[rol]
-        promedio = {k: stats[k] // len(hoy_partidas) for k in stats}
-        maximos = {"Daño Infligido":100000, "Daño Recibido":100000, "Oro Total":15000, "Participación":100}
-        valores_norm = [promedio["dano"], promedio["recibido"], promedio["oro"], promedio["participacion"]]
-        feedback, calif, percentiles = calificar_desempeno(valores_norm, rol, maximos)
+        n = len(hoy_partidas)
+        prom = {"dano":stats["dano"]/n, "recibido":stats["recibido"]/n,
+                "oro":stats["oro"]/n, "participacion":stats["participacion"]/n}
+        vals = [prom["dano"], prom["recibido"], prom["oro"], prom["participacion"]]
+        msg, cal, pct = calificar_desempeno(vals, rol, MAXIMOS)
         resumen[rol] = {
-            "Daño Infligido Promedio": promedio["dano"],
-            "Daño Recibido Promedio": promedio["recibido"],
-            "Oro Total Promedio": promedio["oro"],
-            "Participación Promedio": promedio["participacion"],
-            "Calificación": calif,
-            "Feedback": feedback
+            "Prom. Daño Infligido": int(prom["dano"]),
+            "Prom. Daño Recibido": int(prom["recibido"]),
+            "Prom. Oro Total": int(prom["oro"]),
+            "Prom. Participación": int(prom["participacion"]),
+            "Calificación": cal,
+            "Feedback": msg
         }
-        st.subheader(rol)
-        st.write(resumen[rol])
+        buf = generar_grafico(pct, rol, MAXIMOS)
+        st.image(buf)
 
-    comentarios_relevantes = [p.get("comentario", "") for p in hoy_partidas if len(p.get("comentario", "")) > 20]
-    if comentarios_relevantes:
-        st.subheader("\U0001F9E0 Comentarios detectados:")
-        for comentario in comentarios_relevantes:
-            analisis = []
-            if "afk" in comentario.lower():
-                analisis.append("⚠️ Se reportó un jugador AFK.")
-            if "visión" in comentario.lower() or "ward" in comentario.lower():
-                analisis.append("👁️ Falta de visión mencionada. Refuerza uso de sentinelas y control de mapa.")
-            if "tilt" in comentario.lower() or "flame" in comentario.lower():
-                analisis.append("😠 Posible mal ambiente. Refuerza comunicación positiva y ánimo del equipo.")
-            if analisis:
-                st.markdown(f"**Comentario:** _{comentario}_")
-                st.markdown("\n".join(analisis))
+    st.subheader("Detalles")
+    for rol, datos in resumen.items():
+        st.markdown(f"**{rol}**")
+        for k,v in datos.items():
+            st.write(f"- {k}: {v}")
 
-# =============================
-# ESTILOS PERSONALIZADOS
-# =============================
-st.markdown("""
-<style>
-body, .css-1d391kg { background-color: #0a0a0a; color: white; }
-.stButton>button { background-color: #FFD700; color: black; font-weight: bold; }
-input, .stNumberInput input { background-color: #1e1e1e; color: white; }
-</style>
-""", unsafe_allow_html=True)
+    if st.button("Exportar PDF"):
+        pdf_bytes = exportar_pdf(resumen, hoy)
+        st.download_button("Descargar PDF", pdf_bytes, file_name=f"Resumen_{hoy}.pdf", mime="application/pdf")
