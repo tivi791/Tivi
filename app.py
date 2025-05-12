@@ -1,8 +1,6 @@
-
 import streamlit as st
 import pandas as pd
 import altair as alt
-from fpdf import FPDF
 import matplotlib.pyplot as plt
 import os
 
@@ -48,7 +46,7 @@ T = {
         "malo": "❌ Bajo rendimiento. Revisar toma de decisiones.",
         "rol": "Rol",
         "puntaje": "Puntaje de Rendimiento",
-        "exportar": "📤 Exportar todo a PDF"
+        "exportar": "📤 Exportar todo a HTML"
     },
     "English": {
         "titulo": "🐺 WOLF SEEKERS E-SPORTS - Daily Performance Tracker by Role",
@@ -73,7 +71,7 @@ T = {
         "malo": "❌ Poor performance. Review your decisions.",
         "rol": "Role",
         "puntaje": "Performance Score",
-        "exportar": "📤 Export all to PDF"
+        "exportar": "📤 Export all to HTML"
     }
 }
 
@@ -202,23 +200,23 @@ if st.session_state.get("logged_in", False):
 
     if st.button(tr["exportar"]):
         if not promedio.empty and grafico_path:
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", size=12)
-            pdf.cell(200, 10, txt="Reporte Diario de Rendimiento", ln=True, align="C")
-            pdf.ln(10)
-            pdf.cell(200, 10, txt="Promedio de rendimiento por línea", ln=True)
-            for index, row in promedio.iterrows():
-                pdf.cell(40, 10, row["Línea"], border=1)
-                pdf.cell(40, 10, str(round(row["Oro"], 2)), border=1)
-                pdf.cell(40, 10, str(round(row["Daño Infligido"], 2)), border=1)
-                pdf.cell(40, 10, str(round(row["Daño Recibido"], 2)), border=1)
-                pdf.cell(40, 10, str(round(row["Participación (%)"], 2)), border=1)
-                pdf.cell(40, 10, str(round(row[tr["rendimiento"]], 2)), border=1)
-                pdf.ln()
-            if grafico_path:
-                pdf.image(grafico_path, x=10, y=pdf.get_y(), w=190)
-            pdf_path = "registro_diario.pdf"
-            pdf.output(pdf_path)
-            with open(pdf_path, "rb") as f:
-                st.download_button(label=tr["exportar"], data=f, file_name=pdf_path, mime="application/pdf")
+            html_content = f"""
+            <html>
+            <head><title>Reporte Diario de Rendimiento</title></head>
+            <body>
+                <h1 style="text-align: center;">{tr["titulo"]}</h1>
+                <h2>{tr["promedio"]}</h2>
+                {promedio.to_html(index=False)}
+                <h3>{tr["grafico"]}</h3>
+                <img src="{grafico_path}" alt="Grafico Promedio" width="800">
+            </body>
+            </html>
+            """
+            # Guardamos el archivo HTML
+            html_path = "registro_diario.html"
+            with open(html_path, "w") as file:
+                file.write(html_content)
+
+            # Proporcionamos un botón para descargar el archivo HTML
+            with open(html_path, "r") as f:
+                st.download_button(label=tr["exportar"], data=f, file_name=html_path, mime="text/html")
