@@ -50,9 +50,11 @@ def calificar_desempeno(valores_norm, rol, maximos):
                 mejoras.append("Participa más en peleas de equipo y visión del mapa.")
 
     if not mejoras:
-        mensaje = f"Excelente desempeño como {rol}. Sigue manteniendo tu nivel alto en todas las métricas."cal = "Excelente"
+        mensaje = f"Excelente desempeño como {rol}. Sigue manteniendo tu nivel alto en todas las métricas."
+        cal = "Excelente"
     else:
-       mensaje = f"Áreas de mejora como {rol}:\n- " + "\n- ".join(mejoras)cal = "Bajo"
+        mensaje = f"Áreas de mejora como {rol}:\n- " + "\n- ".join(mejoras)
+        cal = "Bajo"
 
     return mensaje, cal, percentiles
 
@@ -136,7 +138,7 @@ if hoy_partidas:
     resumen = {}
     for rol in roles:
         stats = acumulado[rol]
-        promedio = {k: stats[k] // len(hoy_partidas) for k in stats}
+        promedio = {k: stats[k] / len(hoy_partidas) for k in stats}
         maximos = {"Daño Infligido":100000, "Daño Recibido":100000, "Oro Total":15000, "Participación":100}
         valores_norm = [promedio["dano"], promedio["recibido"], promedio["oro"], promedio["participacion"]]
         feedback, calif, percentiles = calificar_desempeno(valores_norm, rol, maximos)
