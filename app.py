@@ -226,4 +226,11 @@ if st.session_state.get("logged_in", False):
 
             # Proporcionamos un botón para descargar el archivo HTML
             with open(html_path, "r") as f:
-                st.download
+                st.download_button(
+                    label="Descargar Reporte Diario",
+                    data=f,
+                    file_name=html_path,
+                    mime="text/html"
+                )
+        else:
+            st.warning("No hay datos para exportar.")
