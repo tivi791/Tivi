@@ -3,204 +3,216 @@ import pandas as pd
 import altair as alt
 import matplotlib.pyplot as plt
 import base64
+import os
+from datetime import datetime
 
-# — Diccionario de usuarios y contraseñas —
+# Diccionario de usuarios y contraseñas
 USUARIOS = {"Tivi": "2107", "Ghost": "203"}
 
+# Función para iniciar sesión
 def login(username, password):
-    if username in USUARIOS and USUARIOS[username] == password:
-        return True, "Inicio de sesión exitoso!"
-    return False, "Usuario o contraseña incorrectos"
+    if username in USUARIOS:
+        if USUARIOS[username] == password:
+            return True, "Inicio de sesión exitoso!"
+        else:
+            return False, "Contraseña incorrecta"
+    else:
+        return False, "Usuario no encontrado"
 
+# Configuración de la página
 st.set_page_config(page_title="WOLF SEEKERS - Tracker Diario", layout="wide")
 
-# — Traducciones simples —
+# Títulos y etiquetas en español
 tr = {
-    "registro": "📋 Registro",
-    "historial": "📚 Historial",
-    "promedio": "📈 Promedio",
-    "feedback": "🗣️ Feedback",
-    "jugador": "👤 Rendimiento por Línea",
-    "guardar": "💾 Guardar partida",
-    "exportar": "📤 Exportar a HTML",
-    "rendimiento": "Rendimiento (%)"
+    "titulo": "🐺 WOLF SEEKERS E-SPORTS - Registro Diario de Rendimiento por Línea",
+    "registro": "📋 Registro de Rendimiento",
+    "guardar": "💾 Guardar esta partida",
+    "guardado": "✅ Partida guardada correctamente.",
+    "historial": "📚 Historial de partidas del día",
+    "promedio": "📈 Promedio de rendimiento por línea",
+    "grafico": "📊 Comparativa Visual",
+    "feedback": "🗣️ Retroalimentación por Línea",
+    "oro": "Oro",
+    "dano_i": "Daño Infligido",
+    "dano_r": "Daño Recibido",
+    "participacion": "Participación en %",
+    "asesinatos": "Asesinatos",
+    "muertes": "Muertes",
+    "asistencias": "Asistencias",
+    "rendimiento": "Rendimiento (%)",
+    "exportar": "📤 Exportar todo a HTML"
 }
 
-# — Sidebar de navegación —
-st.sidebar.title("Menú")
-seccion = st.sidebar.radio("", [
-    tr["registro"],
-    tr["historial"],
-    tr["promedio"],
-    tr["feedback"],
-    tr["jugador"]
-])
+st.title(tr["titulo"])
+username = st.text_input("Nombre de usuario")
+password = st.text_input("Contraseña", type="password")
 
-# — Login sencillo —
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+if st.button("Iniciar sesión"):
+    success, message = login(username, password)
+    st.session_state.logged_in = success
+    if success:
+        st.success(message)
+    else:
+        st.error(message)
 
-if not st.session_state.logged_in:
-    st.title("🐺 WOLF SEEKERS E-SPORTS")
-    user = st.text_input("Usuario")
-    pwd = st.text_input("Contraseña", type="password")
-    if st.button("Iniciar sesión"):
-        ok, msg = login(user, pwd)
-        st.session_state.logged_in = ok
-        st.success(msg) if ok else st.error(msg)
-    st.stop()
+if st.session_state.get("logged_in", False):
+    lineas = ["TOPLANER", "JUNGLA", "MIDLANER", "ADC", "SUPPORT"]
+    
+    # Inicializar estado
+    if "partidas_dia" not in st.session_state:
+        st.session_state.partidas_dia = []
+    if "partida_count" not in st.session_state:
+        st.session_state.partida_count = 1
 
-# — Estructuras de datos en session_state —
-if "partidas" not in st.session_state:
-    st.session_state.partidas = []
-if "contador" not in st.session_state:
-    st.session_state.contador = 1
+    tab1, tab2, tab3, tab4 = st.tabs([
+        tr["registro"], 
+        tr["historial"], 
+        tr["promedio"], 
+        tr["feedback"]
+    ])
 
-lineas = ["TOPLANER", "JUNGLA", "MIDLANER", "ADC", "SUPPORT"]
+    # Pestaña 1: Registro
+    with tab1:
+        st.markdown("### 📌 Ingresa los datos por línea:")
+        datos = []
+        for linea in lineas:
+            with st.expander(f"📍 {linea}", expanded=False):
+                oro = st.number_input(f"{linea} - {tr['oro']}", 0, step=100, key=f"oro_{linea}")
+                dano_i = st.number_input(f"{linea} - {tr['dano_i']}", 0, step=100, key=f"di_{linea}")
+                dano_r = st.number_input(f"{linea} - {tr['dano_r']}", 0, step=100, key=f"dr_{linea}")
+                participacion = st.slider(f"{linea} - {tr['participacion']}", 0, 100, key=f"p_{linea}")
+                asesinatos = st.number_input(f"{linea} - {tr['asesinatos']}", 0, step=1, key=f"a_{linea}")
+                muertes = st.number_input(f"{linea} - {tr['muertes']}", 0, step=1, key=f"m_{linea}")
+                asistencias = st.number_input(f"{linea} - {tr['asistencias']}", 0, step=1, key=f"as_{linea}")
+                datos.append({
+                    "Línea": linea,
+                    "Oro": oro,
+                    "Daño Infligido": dano_i,
+                    "Daño Recibido": dano_r,
+                    "Participación (%)": participacion,
+                    "Asesinatos": asesinatos,
+                    "Muertes": muertes,
+                    "Asistencias": asistencias
+                })
 
-# — Pesos por rol para el cálculo de puntaje —
-pesos = {
-    "TOPLANER":   {"oro":0.2, "dano":0.3, "part":0.2, "kda":0.3},
-    "JUNGLA":     {"oro":0.2, "dano":0.25,"part":0.25,"kda":0.3},
-    "MIDLANER":   {"oro":0.2, "dano":0.3, "part":0.2, "kda":0.3},
-    "ADC":        {"oro":0.2, "dano":0.2, "part":0.3, "kda":0.3},
-    "SUPPORT":    {"oro":0.1, "dano":0.1, "part":0.4, "kda":0.4}
-}
-
-# — Funciones centrales —
-def calcular_puntaje(fila):
-    rol = fila["Línea"]
-    p = pesos[rol]
-    kda = (fila["Asesinatos"] + fila["Asistencias"]) / max(1, fila["Muertes"])
-    val_oro = fila["Oro"]/15000
-    val_dano = fila["Daño Infligido"]/100000
-    val_part = fila["Participación (%)"]/100
-    eficiencia = val_oro*p["oro"] + val_dano*p["dano"] + val_part*p["part"] + (kda/5)*p["kda"]
-    return round(eficiencia*100, 2)
-
-def sugerencias(fila):
-    msgs = []
-    if fila["Daño Infligido"] < 20000:
-        msgs.append("🔸 Aumenta tu farmeo y participa en peleas tempranas.")
-    if fila["Participación (%)"] < 50:
-        msgs.append("🔸 Sé más activo en objetivos de equipo.")
-    if (fila["Asesinatos"]+fila["Asistencias"])/max(1,fila["Muertes"]) < 1:
-        msgs.append("🔸 Mejora tu posicionamiento para no morir tanto.")
-    return "\n".join(msgs) or "✅ Buen equilibrio de métricas."
-
-# — Sección REGISTRO —
-if seccion == tr["registro"]:
-    st.header(tr["registro"])
-    datos = []
-    for linea in lineas:
-        with st.expander(linea):
-            oro = st.number_input("Oro", 0, step=100, key=f"oro_{linea}")
-            dano = st.number_input("Daño Infligido", 0, step=100, key=f"dano_{linea}")
-            rec = st.number_input("Daño Recibido", 0, step=100, key=f"dr_{linea}")
-            part = st.slider("Participación %", 0, 100, key=f"part_{linea}")
-            a = st.number_input("Asesinatos", 0, step=1, key=f"a_{linea}")
-            m = st.number_input("Muertes", 0, step=1, key=f"m_{linea}")
-            asi = st.number_input("Asistencias", 0, step=1, key=f"as_{linea}")
-            com = st.text_area("Comentarios", key=f"com_{linea}")
-            datos.append({
-                "Línea": linea, "Oro":oro, "Daño Infligido":dano,
-                "Daño Recibido":rec, "Participación (%)":part,
-                "Asesinatos":a, "Muertes":m, "Asistencias":asi,
-                "Comentarios": com
-            })
-    if st.button(tr["guardar"]):
         df = pd.DataFrame(datos)
-        df["Partida"] = f"Partida {st.session_state.contador}"
-        df["Rendimiento"] = df.apply(calcular_puntaje, axis=1)
-        st.session_state.partidas.append(df)
-        st.session_state.contador += 1
-        st.success("Partida guardada correctamente")
 
-# — Sección HISTORIAL —
-elif seccion == tr["historial"]:
-    st.header(tr["historial"])
-    if st.session_state.partidas:
-        hist = pd.concat(st.session_state.partidas, ignore_index=True)
-        st.dataframe(hist)
-    else:
-        st.info("No hay partidas registradas")
+        def calcular_puntaje(fila):
+            kda = (fila["Asesinatos"] + fila["Asistencias"]) / max(1, fila["Muertes"])
+            eficiencia = (
+                (fila["Oro"] / 15000) * 0.2 +
+                (fila["Daño Infligido"] / 100000) * 0.2 +
+                (fila["Participación (%)"] / 100) * 0.2 +
+                (kda / 5) * 0.4
+            )
+            return round(eficiencia * 100, 2)
 
-# — Sección PROMEDIO y GRÁFICOS —
-elif seccion == tr["promedio"]:
-    st.header(tr["promedio"])
-    if st.session_state.partidas:
-        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        prom = df_all.groupby("Línea").mean(numeric_only=True).reset_index()
-        st.dataframe(prom)
-        # Gráfico Altair de valores
-        vals = prom.melt("Línea", ["Oro","Daño Infligido","Daño Recibido"])
-        ch1 = alt.Chart(vals).mark_bar().encode(
-            x="Línea", y="value", color="variable"
-        ).properties(title="Valores Numéricos", width=600)
-        st.altair_chart(ch1, use_container_width=True)
-        # Gráfico Altair de porcentajes
-        pct = prom.melt("Línea", ["Participación (%)","Rendimiento"])
-        ch2 = alt.Chart(pct).mark_bar().encode(
-            x="Línea", y="value", color="variable"
-        ).properties(title="Porcentajes", width=600)
-        st.altair_chart(ch2, use_container_width=True)
-    else:
-        st.info("No hay datos para calcular promedio")
+        df[tr["rendimiento"]] = df.apply(calcular_puntaje, axis=1)
 
-# — Sección FEEDBACK DETALLADO —
-elif seccion == tr["feedback"]:
-    st.header(tr["feedback"])
-    if st.session_state.partidas:
-        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        for ln in lineas:
-            sub = df_all[df_all["Línea"]==ln]
-            avg = sub["Rendimiento"].mean()
-            st.subheader(ln)
-            st.progress(int(avg))  # barra de progreso
-            st.write(f"**Rendimiento Promedio:** {round(avg,2)}%")
-            st.write(sugerencias(sub.iloc[-1]))
-    else:
-        st.info("Registra al menos una partida")
+        def feedback_text(puntaje):
+            if puntaje >= 85:
+                return "🔥 Excelente desempeño. Sigue así."
+            elif puntaje >= 70:
+                return "✅ Buen desempeño. Puedes pulir algunos detalles."
+            elif puntaje >= 50:
+                return "⚠️ Rendimiento regular. Necesita ajustes."
+            else:
+                return "❌ Bajo rendimiento. Revisar toma de decisiones."
 
-# — Sección RENDIMIENTO POR JUGADOR —
-elif seccion == tr["jugador"]:
-    st.header("📈 Rendimiento por Línea")
-    if st.session_state.partidas:
-        seleccionado = st.selectbox("Selecciona línea", lineas)
-        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        df_line = df_all[df_all["Línea"]==seleccionado]
-        fig, ax = plt.subplots()
-        ax.plot(df_line["Partida"], df_line["Rendimiento"], marker='o')
-        ax.set_title(f"Rendimiento {seleccionado}")
-        ax.set_ylim(0,100)
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
-    else:
-        st.info("No hay datos para graficar")
+        df["Feedback"] = df[tr["rendimiento"]].apply(feedback_text)
 
-# — Exportar a HTML —
-st.sidebar.markdown("---")
-if st.sidebar.button(tr["exportar"]):
-    if st.session_state.partidas:
-        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        prom = df_all.groupby("Línea").mean(numeric_only=True).reset_index()
-        # Genera gráfico estático de promedio para HTML
-        fig, ax = plt.subplots(figsize=(8,4))
-        ax.bar(prom["Línea"], prom["Rendimiento"])
-        plt.xticks(rotation=45)
-        fp = "temp_promedio.png"
-        fig.savefig(fp, bbox_inches="tight")
-        with open(fp,"rb") as imgf:
-            img_b64 = base64.b64encode(imgf.read()).decode("utf-8")
-        html = f"""
-        <html><body>
-        <h1>{tr['promedio']}</h1>
-        {prom.to_html(index=False)}
-        <img src="data:image/png;base64,{img_b64}" width="600"/>
-        </body></html>"""
-        Path = "reporte.html"
-        with open(Path,"w") as f: f.write(html)
-        st.sidebar.success("HTML generado")
-        st.sidebar.download_button("Descargar HTML", Path, "reporte.html")
-    else:
-        st.sidebar.warning("Nada para exportar")
+        if st.button(tr["guardar"]):
+            partida_id = f"Partida {st.session_state.partida_count}"
+            df["Partida"] = partida_id
+            st.session_state.partidas_dia.append(df.copy())
+            st.session_state.partida_count += 1
+            st.success(tr["guardado"])
+
+    # Pestaña 2: Historial
+    with tab2:
+        st.header(tr["historial"])
+        if st.session_state.partidas_dia:
+            historial_df = pd.concat(st.session_state.partidas_dia, ignore_index=True)
+            st.dataframe(historial_df)
+        else:
+            st.info("No hay partidas guardadas.")
+
+    # Pestaña 3: Promedio y Gráfico
+    with tab3:
+        st.header(tr["promedio"])
+        if st.session_state.partidas_dia:
+            df_all = pd.concat(st.session_state.partidas_dia, ignore_index=True)
+            promedio = df_all.groupby("Línea").mean(numeric_only=True).reset_index()
+            st.dataframe(promedio)
+
+            # Gráfico Altair
+            melted = promedio.melt(
+                id_vars=["Línea"],
+                value_vars=["Oro", "Daño Infligido", "Daño Recibido", "Participación (%)", tr["rendimiento"]]
+            )
+            chart = alt.Chart(melted).mark_bar().encode(
+                x=alt.X("Línea:N", title="Línea"),
+                y=alt.Y("value:Q", title="Valor Promedio"),
+                color="variable:N",
+                tooltip=["Línea", "variable", "value"]
+            ).properties(width=700)
+            st.altair_chart(chart, use_container_width=True)
+
+            # Guardar gráfico Matplotlib y codificar en base64
+            fig, ax = plt.subplots(figsize=(10, 5))
+            for var in ["Oro", "Daño Infligido", "Daño Recibido", "Participación (%)", tr["rendimiento"]]:
+                ax.plot(promedio["Línea"], promedio[var], marker='o', label=var)
+            ax.set_title("Promedio de Rendimiento por Línea")
+            ax.legend()
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            grafico_path = "grafico_promedio.png"
+            fig.savefig(grafico_path)
+            with open(grafico_path, "rb") as img_file:
+                encoded_img = base64.b64encode(img_file.read()).decode('utf-8')
+        else:
+            st.info("No hay partidas para calcular el promedio.")
+
+    # Pestaña 4: Feedback con barra de progreso
+    with tab4:
+        st.header(tr["feedback"])
+        if st.session_state.partidas_dia:
+            feedback_df = pd.concat(st.session_state.partidas_dia, ignore_index=True)
+            for linea in lineas:
+                sub = feedback_df[feedback_df["Línea"] == linea]
+                avg = sub[tr["rendimiento"]].mean()
+                progreso = int(round(avg))
+                progreso = max(0, min(progreso, 100))
+                st.subheader(linea)
+                st.progress(progreso)
+                st.write(f"**Rendimiento Promedio:** {round(avg, 2)}%")
+        else:
+            st.info("No hay partidas para mostrar retroalimentación.")
+
+    # Exportar a HTML
+    if st.button(tr["exportar"]):
+        if st.session_state.partidas_dia and 'promedio' in locals() and grafico_path:
+            html_content = f"""
+            <html>
+            <head><title>Reporte Diario de Rendimiento</title></head>
+            <body>
+                <h1 style="text-align: center;">{tr['titulo']}</h1>
+                <h2>{tr['promedio']}</h2>
+                {promedio.to_html(index=False)}
+                <h3>{tr['grafico']}</h3>
+                <img src="data:image/png;base64,{encoded_img}" alt="Gráfico Promedio" width="800">
+            </body>
+            </html>
+            """
+            html_path = "registro_diario.html"
+            with open(html_path, "w") as file:
+                file.write(html_content)
+            with open(html_path, "r") as f:
+                st.download_button(
+                    label="Descargar Reporte Diario",
+                    data=f,
+                    file_name=html_path,
+                    mime="text/html"
+                )
+        else:
+            st.warning("No hay datos para exportar.")
