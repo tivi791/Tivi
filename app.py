@@ -24,6 +24,28 @@ if "partidas" not in st.session_state:
 def autenticar_usuario(u, c):
     return USUARIOS.get(u) == c
 
+def calificar_desempeno(vals, rol, maximos):
+    pct = lambda v, m: min((v / m)*100, 100) if m else 0
+    names = ["Daño Infligido", "Daño Recibido", "Oro Total", "Participación"]
+    percentiles = {n: pct(v, maximos[n]) for n, v in zip(names, vals)}
+    umbr = {
+        "TOPLANER":    {"Daño Infligido":80, "Oro Total":60, "Participación":60},
+        "JUNGLER":     {"Daño Infligido":85, "Oro Total":70, "Participación":60},
+        "MIDLANER":    {"Daño Infligido":85, "Oro Total":70, "Participación":60},
+        "ADCARRY":     {"Daño Infligido":90, "Oro Total":70, "Participación":60},
+        "SUPPORT":     {"Daño Infligido":60, "Oro Total":50, "Participación":70},
+    }
+    mejoras = []
+    for m, p in percentiles.items():
+        if p < umbr[rol].get(m,0):
+            if m=="Daño Infligido": mejoras.append("Mejora farmeo/presión")
+            if m=="Oro Total":      mejoras.append("Optimiza farmeo de objetivos")
+            if m=="Participación":  mejoras.append("Participa más en equipo")
+    if not mejoras:
+        return f"Excelente desempeño como {rol}.", "Excelente", percentiles
+    else:
+        return "Áreas de mejora:\n- " + "\n- ".join(mejoras), "Bajo", percentiles
+
 def exportar_pdf(resumen, fecha):
     pdf = FPDF(); pdf.add_page(); pdf.set_font("Arial", size=12)
     pdf.cell(0,10, f"Resumen Diario - {fecha}", ln=True, align="C")
@@ -81,14 +103,13 @@ hj = [p for p in st.session_state.partidas if p["fecha"]==hoy]
 st.write(f"Partidas hoy: {len(hj)}")
 
 if hj:
-    # Acumular y promediar
     acum = defaultdict(lambda: {"dano":0,"recibido":0,"oro":0,"participacion":0})
     for p in hj:
         for r in roles:
-            d = p["datos"][r]
-            for k in acum[r]:
-                acum[r][k] += d[k]
+            for k,v in p["datos"][r].items():
+                acum[r][k] += v
     n = len(hj)
+    MAX = {"Daño Infligido":200000,"Daño Recibido":200000,"Oro Total":20000,"Participación":100}
     resumen = {}
     rows = []
     for r in roles:
@@ -99,12 +120,12 @@ if hj:
             "Participación": acum[r]["participacion"]/n
         }
         resumen[r] = prom
-        for met, val in prom.items():
-            rows.append({"Rol": r, "Métrica": met, "Valor": val})
+        for met,val in prom.items():
+            rows.append({"Rol":r, "Métrica":met, "Valor":val})
 
     df = pd.DataFrame(rows)
 
-    # Gráfico de barras agrupadas
+    # — Gráfico de barras agrupadas Altair —
     chart = alt.Chart(df).mark_bar().encode(
         x=alt.X("Rol:N", title="Rol"),
         y=alt.Y("Valor:Q", title="Valor Promedio"),
@@ -113,13 +134,13 @@ if hj:
     ).properties(width=150, height=250)
     st.altair_chart(chart, use_container_width=True)
 
-    # Mostrar tabla
+    # Tabla de promedios
     st.subheader("Tabla de Promedios")
-    st.dataframe(df.pivot(index="Rol", columns="Métrica", values="Valor").round(1))
+    pivot = df.pivot(index="Rol", columns="Métrica", values="Valor").round(1)
+    st.dataframe(pivot)
 
     # Exportar PDF
     if st.button("Exportar PDF"):
         pdf_bytes = exportar_pdf(resumen, hoy)
         st.download_button("Descargar PDF", pdf_bytes,
                            file_name=f"Resumen_{hoy}.pdf", mime="application/pdf")
-
