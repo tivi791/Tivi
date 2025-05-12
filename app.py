@@ -102,6 +102,15 @@ def exportar_pdf(resumen, fecha, equipo="WOLF SEEKERS E-SPORTS"):
             pdf.multi_cell(0, 6, texto)
     return pdf.output(dest='S').encode('latin-1')
 
+def exportar_excel(resumen, fecha):
+    """Generar archivo Excel con el resumen"""
+    df = pd.DataFrame(resumen).T
+    excel_buffer = io.BytesIO()
+    with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
+        df.to_excel(writer, sheet_name=f"Resumen {fecha}")
+    excel_buffer.seek(0)
+    return excel_buffer
+
 # ==============================
 # INICIO DE SESIÓN
 # ==============================
@@ -176,8 +185,26 @@ if "usuario" in st.session_state:
                 "Calificación": calif,
                 "Feedback": feedback
             }
+
+            # Mostrar gráfico radar
             st.subheader(rol)
             st.write(resumen[rol])
+            st.pyplot(generar_grafico(resumen[rol], f"Desempeño {rol}", maximos))
+
+        # Opciones de exportación
+        st.download_button(
+            label="Descargar Resumen en PDF",
+            data=exportar_pdf(resumen, hoy),
+            file_name=f"Resumen_{hoy}.pdf",
+            mime="application/pdf"
+        )
+
+        st.download_button(
+            label="Descargar Resumen en Excel",
+            data=exportar_excel(resumen, hoy),
+            file_name=f"Resumen_{hoy}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
 # ==============================
 # ESTILOS PERSONALIZADOS
