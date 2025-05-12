@@ -4,6 +4,7 @@ import altair as alt
 import matplotlib.pyplot as plt
 import base64
 import os
+from datetime import datetime
 
 # Diccionario de usuarios y contraseñas
 USUARIOS = {"Tivi": "2107", "Ghost": "203"}
@@ -21,62 +22,32 @@ def login(username, password):
 # Configuración de la página
 st.set_page_config(page_title="WOLF SEEKERS - Tracker Diario", layout="wide")
 
-idioma = st.selectbox("🌐 Elige idioma / Select language", ["Español", "English"])
-
-T = {
-    "Español": {
-        "titulo": "🐺 WOLF SEEKERS E-SPORTS - Registro Diario de Rendimiento por Línea",
-        "registro": "📋 Registro de Rendimiento",
-        "guardar": "💾 Guardar esta partida",
-        "guardado": "✅ Partida guardada correctamente.",
-        "historial": "📚 Historial de partidas del día",
-        "promedio": "📈 Promedio de rendimiento por línea",
-        "grafico": "📊 Comparativa Visual",
-        "feedback": "🗣️ Retroalimentación por Línea",
-        "oro": "Oro",
-        "dano_i": "Daño Infligido",
-        "dano_r": "Daño Recibido",
-        "participacion": "Participación en %",
-        "asesinatos": "Asesinatos",
-        "muertes": "Muertes",
-        "asistencias": "Asistencias",
-        "rendimiento": "Rendimiento (%)",
-        "excelente": "🔥 Excelente desempeño. Sigue así.",
-        "bueno": "✅ Buen desempeño. Puedes pulir algunos detalles.",
-        "regular": "⚠️ Rendimiento regular. Necesita ajustes.",
-        "malo": "❌ Bajo rendimiento. Revisar toma de decisiones.",
-        "rol": "Rol",
-        "puntaje": "Puntaje de Rendimiento",
-        "exportar": "📤 Exportar todo a HTML"
-    },
-    "English": {
-        "titulo": "🐺 WOLF SEEKERS E-SPORTS - Daily Performance Tracker by Role",
-        "registro": "📋 Performance Entry",
-        "guardar": "💾 Save this match",
-        "guardado": "✅ Match saved successfully.",
-        "historial": "📚 Match history of the day",
-        "promedio": "📈 Average performance by role",
-        "grafico": "📊 Visual Comparison",
-        "feedback": "🗣️ Feedback by Role",
-        "oro": "Gold",
-        "dano_i": "Damage Dealt",
-        "dano_r": "Damage Taken",
-        "participacion": "Team Participation (%)",
-        "asesinatos": "Kills",
-        "muertes": "Deaths",
-        "asistencias": "Assists",
-        "rendimiento": "Performance (%)",
-        "excelente": "🔥 Excellent performance. Keep it up!",
-        "bueno": "✅ Good performance. Some details to improve.",
-        "regular": "⚠️ Average performance. Needs adjustments.",
-        "malo": "❌ Poor performance. Review your decisions.",
-        "rol": "Role",
-        "puntaje": "Performance Score",
-        "exportar": "📤 Export all to HTML"
-    }
+# Títulos y etiquetas en español
+tr = {
+    "titulo": "🐺 WOLF SEEKERS E-SPORTS - Registro Diario de Rendimiento por Línea",
+    "registro": "📋 Registro de Rendimiento",
+    "guardar": "💾 Guardar esta partida",
+    "guardado": "✅ Partida guardada correctamente.",
+    "historial": "📚 Historial de partidas del día",
+    "promedio": "📈 Promedio de rendimiento por línea",
+    "grafico": "📊 Comparativa Visual",
+    "feedback": "🗣️ Retroalimentación por Línea",
+    "oro": "Oro",
+    "dano_i": "Daño Infligido",
+    "dano_r": "Daño Recibido",
+    "participacion": "Participación en %",
+    "asesinatos": "Asesinatos",
+    "muertes": "Muertes",
+    "asistencias": "Asistencias",
+    "rendimiento": "Rendimiento (%)",
+    "excelente": "🔥 Excelente desempeño. Sigue así.",
+    "bueno": "✅ Buen desempeño. Puedes pulir algunos detalles.",
+    "regular": "⚠️ Rendimiento regular. Necesita ajustes.",
+    "malo": "❌ Bajo rendimiento. Revisar toma de decisiones.",
+    "rol": "Rol",
+    "puntaje": "Puntaje de Rendimiento",
+    "exportar": "📤 Exportar todo a HTML"
 }
-
-tr = T[idioma]
 
 st.title(tr["titulo"])
 username = st.text_input("Nombre de usuario")
@@ -150,6 +121,9 @@ if st.session_state.get("logged_in", False):
             st.session_state.partidas_dia = []
 
         if st.button(tr["guardar"]):
+            # Agregar fecha y hora a cada partida
+            partida_id = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            df["Partida"] = partida_id
             st.session_state.partidas_dia.append(df.copy())
             st.success(tr["guardado"])
 
@@ -158,7 +132,6 @@ if st.session_state.get("logged_in", False):
             historial_df = pd.concat(st.session_state.partidas_dia, ignore_index=True)
             st.write(historial_df)
         else:
-            historial_df = pd.DataFrame()
             st.write("No hay partidas guardadas.")
 
     with tab3:
