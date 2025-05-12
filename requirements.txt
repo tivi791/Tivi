@@ -1,8 +1,8 @@
-streamlit
-fpdf
-gitpython
-matplotlib
-requests
-pandas
-openpyxl
-altair
+ streamlit
+ fpdf
+ gitpython
+ matplotlib
+ requests
+ pandas
+ openpyxl
++altair
