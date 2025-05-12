@@ -53,8 +53,7 @@ def calificar_desempeno(valores_norm, rol, maximos):
         mensaje = f"Excelente desempeño como {rol}. Sigue manteniendo tu nivel alto en todas las métricas."
         cal = "Excelente"
     else:
-        mensaje = f"Áreas de mejora como {rol}:
-- " + "\n- ".join(mejoras)
+       mensaje = f"Áreas de mejora como {rol}:\n- " + "\n- ".join(mejoras)
         cal = "Bajo"
 
     return mensaje, cal, percentiles
