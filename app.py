@@ -120,11 +120,14 @@ if st.session_state.get("logged_in", False):
         if "partidas_dia" not in st.session_state:
             st.session_state.partidas_dia = []
 
+        if "partida_count" not in st.session_state:
+            st.session_state.partida_count = 1  # Inicializa el contador
+
         if st.button(tr["guardar"]):
-            # Agregar fecha y hora a cada partida
-            partida_id = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            partida_id = f"Partida {st.session_state.partida_count}"  # Asigna el identificador
             df["Partida"] = partida_id
             st.session_state.partidas_dia.append(df.copy())
+            st.session_state.partida_count += 1  # Incrementa el contador
             st.success(tr["guardado"])
 
     with tab2:
