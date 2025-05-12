@@ -6,7 +6,6 @@ from math import pi
 from fpdf import FPDF
 import pandas as pd
 import io
-import base64
 
 # ==============================
 # CONFIGURACIÓN Y SESIÓN
@@ -164,7 +163,8 @@ if "usuario" in st.session_state:
         resumen = {}
         for rol in roles:
             stats = acumulado[rol]
-            promedio = {k: stats[k] // len(hoy_partidas) for k in stats}
+            # No dividir por el número de partidas, acumulamos los valores
+            promedio = {k: stats[k] for k in stats}
             maximos = {"Daño Infligido":100000, "Daño Recibido":100000, "Oro Total":15000, "Participación":100}
             valores_norm = [promedio["dano"], promedio["recibido"], promedio["oro"], promedio["participacion"]]
             feedback, calif, percentiles = calificar_desempeno(valores_norm, rol, maximos)
@@ -174,21 +174,20 @@ if "usuario" in st.session_state:
                 "Promedio Oro Total": promedio["oro"],
                 "Promedio Participación": promedio["participacion"],
                 "Calificación": calif,
-                "Feedback": feedback,
+                "Feedback": feedback
             }
-            
-            st.write(f"### {rol}")
-            st.write(f"Promedio Daño Infligido: {promedio['dano']}")
-            st.write(f"Promedio Daño Recibido: {promedio['recibido']}")
-            st.write(f"Promedio Oro Total: {promedio['oro']}")
-            st.write(f"Promedio Participación: {promedio['participacion']}")
-            st.write(f"Calificación: {calif}")
-            st.write(f"Feedback: {feedback}")
-            
-            st.write("#### Gráfico")
             buf = generar_grafico(percentiles, rol, maximos)
             st.image(buf)
 
-        if st.button("Generar PDF"):
-            pdf_bytes = exportar_pdf(resumen, hoy)
-            st.download_button("Descargar PDF", data=pdf_bytes, file_name="Resumen_Diario.pdf", mime="application/pdf")
+        # Mostrar resumen
+        for rol, datos in resumen.items():
+            st.subheader(rol)
+            for k, v in datos.items():
+                st.write(f"{k}: {v}")
+
+        # ==============================
+        # EXPORTAR PDF
+        # ==============================
+        if st.button("Exportar PDF"):
+            pdf_output = exportar_pdf(resumen, hoy)
+            st.download_button("Descargar PDF", pdf_output, file_name=f"resumen_{hoy}.pdf")
