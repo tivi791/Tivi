@@ -50,11 +50,9 @@ def calificar_desempeno(valores_norm, rol, maximos):
                 mejoras.append("Participa más en peleas de equipo y visión del mapa.")
 
     if not mejoras:
-        mensaje = f"Excelente desempeño como {rol}. Sigue manteniendo tu nivel alto en todas las métricas."
-        cal = "Excelente"
+        mensaje = f"Excelente desempeño como {rol}. Sigue manteniendo tu nivel alto en todas las métricas."cal = "Excelente"
     else:
-       mensaje = f"Áreas de mejora como {rol}:\n- " + "\n- ".join(mejoras)
-        cal = "Bajo"
+       mensaje = f"Áreas de mejora como {rol}:\n- " + "\n- ".join(mejoras)cal = "Bajo"
 
     return mensaje, cal, percentiles
 
