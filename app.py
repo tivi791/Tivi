@@ -7,9 +7,9 @@ USUARIOS = {"Tivi": "2107", "Ghost": "203"}
 
 # Función para iniciar sesión
 def login(username, password):
-    if username in USUARIOS:  # Verificar si el usuario existe
-        if USUARIOS[username] == password:  # Verificar la contraseña
-            return True, "Inicio de sesión exitoso!"  # Mensaje exitoso
+    if username in USUARIOS:
+        if USUARIOS[username] == password:
+            return True, "Inicio de sesión exitoso!"
         else:
             return False, "Contraseña incorrecta"
     else:
@@ -76,13 +76,11 @@ T = {
 # Traducción según el idioma seleccionado
 tr = T[idioma]
 
-# Función de login
+# Login
 st.title(tr["titulo"])
-
 username = st.text_input("Nombre de usuario")
 password = st.text_input("Contraseña", type="password")
 
-# Validación de login
 if st.button("Iniciar sesión"):
     success, message = login(username, password)
     if success:
@@ -92,12 +90,11 @@ if st.button("Iniciar sesión"):
         st.session_state.logged_in = False
         st.error(f"Error: {message}")
 
+# Lógica principal
 if st.session_state.get("logged_in", False):
-    # Aquí va el resto de tu código si el login es exitoso
     lineas = ["TOPLANER", "JUNGLA", "MIDLANER", "ADC", "SUPPORT"]
     datos = []
 
-    # Tabs para organización visual
     tab1, tab2, tab3, tab4 = st.tabs([tr["registro"], tr["historial"], tr["promedio"], tr["feedback"]])
 
     with tab1:
@@ -157,28 +154,47 @@ if st.session_state.get("logged_in", False):
             st.success(tr["guardado"])
 
     with tab2:
-        # Mostrar historial de partidas del día
-        if "partidas_dia" in st.session_state and st.session_state.partidas_dia:
+        if st.session_state.partidas_dia:
             historial_df = pd.concat(st.session_state.partidas_dia, ignore_index=True)
             st.write(historial_df)
         else:
             st.write("No hay partidas guardadas.")
 
     with tab3:
-        # Calcular y mostrar el promedio de rendimiento
-        if "partidas_dia" in st.session_state and st.session_state.partidas_dia:
-            promedio_df = pd.concat(st.session_state.partidas_dia, ignore_index=True).select_dtypes(include=["number"])
-            promedio = promedio_df.mean()
-            st.write(promedio)
+        if st.session_state.partidas_dia:
+            df_completo = pd.concat(st.session_state.partidas_dia, ignore_index=True)
+            promedio = df_completo.groupby("Línea").mean(numeric_only=True).reset_index()
+            st.dataframe(promedio)
+
+            st.subheader(tr["grafico"])
+            melted = promedio.melt(id_vars=["Línea"], value_vars=["Oro", "Daño Infligido", "Daño Recibido", "Participación (%)", tr["rendimiento"]])
+            chart = alt.Chart(melted).mark_bar().encode(
+                x=alt.X("Línea:N", title=tr["rol"]),
+                y=alt.Y("value:Q", title="Valor Promedio"),
+                color="variable:N",
+                tooltip=["Línea", "variable", "value"]
+            ).properties(width=700)
+            st.altair_chart(chart, use_container_width=True)
         else:
             st.write("No hay partidas para calcular el promedio.")
 
     with tab4:
-        # Mostrar feedback
-        if "partidas_dia" in st.session_state and st.session_state.partidas_dia:
+        if st.session_state.partidas_dia:
             feedback_df = pd.concat(st.session_state.partidas_dia, ignore_index=True)
-            feedback_mensajes = feedback_df["Feedback"].value_counts()
-            st.write(feedback_mensajes)
+            st.write("### 🔍 Detalle de Feedback por Línea")
+            st.dataframe(feedback_df[["Línea", tr["rendimiento"], "Feedback"]])
+
+            # Contador de mensajes
+            st.write("### 📊 Resumen de Retroalimentación")
+            feedback_counts = feedback_df["Feedback"].value_counts().reset_index()
+            feedback_counts.columns = ["Mensaje", "Cantidad"]
+
+            chart_fb = alt.Chart(feedback_counts).mark_bar().encode(
+                x=alt.X("Cantidad:Q"),
+                y=alt.Y("Mensaje:N", sort="-x"),
+                color="Mensaje:N"
+            ).properties(height=300)
+            st.altair_chart(chart_fb, use_container_width=True)
         else:
             st.write("No hay partidas para generar retroalimentación.")
 else:
