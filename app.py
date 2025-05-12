@@ -217,11 +217,61 @@ elif seccion == tr["jugador"]:
     else:
         st.info("No hay datos para graficar")
 
-# — Sección EXPORTAR —
-if st.button(tr["exportar"]):
-    with open("WOLF_SEEKERS_Reporte.html", "w") as f:
-        f.write("<html><head><title>Reporte</title></head><body>")
-        f.write("<h1>Informe WOLF SEEKERS</h1>")
-        f.write("<p>Este es el reporte de rendimiento</p>")
-        f.write("</body></html>")
-    st.success("Archivo HTML exportado correctamente")
+# — Exportar a HTML corregido con fecha —
+st.sidebar.markdown("---")
+if st.sidebar.button(tr["exportar"]):
+    if st.session_state.partidas:
+        # Fecha de hoy
+        hoy = datetime.now().strftime("%Y-%m-%d")
+        # Consolidar y calcular promedios
+        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
+        prom = df_all.groupby("Línea").mean(numeric_only=True).reset_index()
+
+        # Gráfico estático
+        fig, ax = plt.subplots(figsize=(8, 4))
+        ax.bar(prom["Línea"], prom["Rendimiento"])
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        fp = "temp_promedio.png"
+        fig.savefig(fp, bbox_inches="tight")
+        plt.close(fig)
+
+        # Convertir imagen a base64
+        with open(fp, "rb") as imgf:
+            img_b64 = base64.b64encode(imgf.read()).decode("utf-8")
+
+        # Construir HTML con fecha
+        html_content = f"""
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Reporte Diario de Rendimiento</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; padding: 20px; }}
+                h1 {{ text-align: center; }}
+                table {{ border-collapse: collapse; width: 100%; margin-bottom: 20px; }}
+                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: center; }}
+                th {{ background-color: #f2f2f2; }}
+                img {{ display: block; margin: 0 auto; }}
+            </style>
+        </head>
+        <body>
+            <h1>Reporte Diario de Rendimiento</h1>
+            <p style="text-align:center;"><strong>Fecha:</strong> {hoy}</p>
+            {prom.to_html(index=False, justify='center')}
+            <h2 style="text-align: center;">{tr['grafico']}</h2>
+            <img src="data:image/png;base64,{img_b64}" width="600" alt="Gráfico Promedio"/>
+        </body>
+        </html>
+        """
+
+        # Botón de descarga
+        st.sidebar.success("HTML generado")
+        st.sidebar.download_button(
+            label="📥 Descargar Reporte HTML",
+            data=html_content,
+            file_name=f"reporte_{hoy}.html",
+            mime="text/html"
+        )
+    else:
+        st.sidebar.warning("Nada para exportar")
