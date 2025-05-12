@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 import matplotlib.pyplot as plt
+import base64
 import os
 
 # Diccionario de usuarios y contraseñas
@@ -189,7 +190,7 @@ if st.session_state.get("logged_in", False):
 
             # Incluir el gráfico en HTML
             with open(grafico_path, "rb") as img_file:
-                encoded_img = img_file.read().encode("base64").decode()
+                encoded_img = base64.b64encode(img_file.read()).decode('utf-8')
 
         else:
             promedio = pd.DataFrame()
@@ -225,4 +226,4 @@ if st.session_state.get("logged_in", False):
 
             # Proporcionamos un botón para descargar el archivo HTML
             with open(html_path, "r") as f:
-                st.download_button(label=tr["exportar"], data=f, file_name=html_path, mime="text/html")
+                st.download
