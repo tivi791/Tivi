@@ -1,91 +1,120 @@
 import streamlit as st
-from datetime import datetime
-from statistics import mean
+import datetime
+from collections import defaultdict
 
-st.title("Evaluación diaria por rol - Honor of Kings")
+# Configurar la página
+st.set_page_config(page_title="WOLF SEEKERS E-SPORTS", layout="centered")
+st.title("\U0001F3C6 WOLF SEEKERS E-SPORTS - Registro Diario")
 
-roles = ["top", "jungla", "mid", "adc", "soporte"]
-metricas = ["asesinatos", "muertes", "asistencias", "daño_infligido", "daño_recibido", "oro", "participación"]
+# Roles personalizados
+roles = ["TOPLANER", "JUNGLER", "MIDLANER", "ADCARRY", "SUPPORT"]
 
+# Datos en sesión
 if "partidas" not in st.session_state:
-    st.session_state["partidas"] = []
+    st.session_state.partidas = []
 
-with st.form("f1"):
-    st.subheader("Registrar nueva partida")
-    datos_juego = {}
+# Función para calificar el desempeño de un jugador
+def calificar_desempeno(dano, recibido, oro, participacion):
+    puntaje = 0
+    if dano > 50000:
+        puntaje += 1
+    if recibido > 30000:
+        puntaje += 1
+    if oro > 10000:
+        puntaje += 1
+    if participacion > 50:
+        puntaje += 1
+
+    if puntaje >= 3:
+        return "Alto"
+    elif puntaje == 2:
+        return "Medio"
+    else:
+        return "Bajo"
+
+# Función para generar feedback
+def generar_feedback(dano, oro, participacion):
+    feedback = []
+    if dano < 40000:
+        feedback.append("Aumenta tu daño infligido: mejora tu farmeo y presiona más en línea.")
+    if oro < 8000:
+        feedback.append("Optimiza tu farmeo de minions y objetivos para mejorar tu oro.")
+    if participacion < 40:
+        feedback.append("Participa más en peleas de equipo y visión del mapa.")
+    return feedback
+
+# Registro de nueva partida
+st.header("Registrar Nueva Partida")
+nueva_partida = {}
+
+for rol in roles:
+    st.subheader(rol)
+    dano = st.number_input(f"Daño Infligido ({rol})", min_value=0)
+    recibido = st.number_input(f"Daño Recibido ({rol})", min_value=0)
+    oro = st.number_input(f"Oro Total ({rol})", min_value=0)
+    participacion = st.number_input(f"Participación ({rol})", min_value=0)
+    nueva_partida[rol] = {
+        "dano": dano,
+        "recibido": recibido,
+        "oro": oro,
+        "participacion": participacion
+    }
+
+comentario = st.text_area("Comentario del equipo sobre esta partida (opcional)")
+
+if st.button("Guardar Partida"):
+    st.session_state.partidas.append({"fecha": datetime.date.today(), "datos": nueva_partida, "comentario": comentario})
+    st.success("Partida guardada ✔️")
+
+# Mostrar resumen diario
+st.header("Resumen Diario")
+hoy = datetime.date.today()
+hoy_partidas = [p for p in st.session_state.partidas if p["fecha"] == hoy]
+st.write(f"Partidas hoy: {len(hoy_partidas)}")
+
+if not hoy_partidas:
+    st.info("No se registraron partidas hoy.")
+else:
+    acumulado = defaultdict(lambda: {"dano": 0, "recibido": 0, "oro": 0, "participacion": 0})
+
+    for partida in hoy_partidas:
+        for rol in roles:
+            datos = partida["datos"][rol]
+            acumulado[rol]["dano"] += datos["dano"]
+            acumulado[rol]["recibido"] += datos["recibido"]
+            acumulado[rol]["oro"] += datos["oro"]
+            acumulado[rol]["participacion"] += datos["participacion"]
 
     for rol in roles:
-        datos_juego[rol] = {}
-        st.markdown(f"**{rol.upper()}**")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            datos_juego[rol]["asesinatos"] = st.number_input(f"Asesinatos ({rol})", min_value=0, step=1, key=f"a_{rol}")
-            datos_juego[rol]["muertes"] = st.number_input(f"Muertes ({rol})", min_value=0, step=1, key=f"m_{rol}")
-        with col2:
-            datos_juego[rol]["asistencias"] = st.number_input(f"Asistencias ({rol})", min_value=0, step=1, key=f"as_{rol}")
-            datos_juego[rol]["oro"] = st.number_input(f"Oro ({rol})", min_value=0, max_value=15000, step=100, key=f"o_{rol}")
-        with col3:
-            datos_juego[rol]["daño_infligido"] = st.number_input(f"Daño infligido ({rol})", min_value=0, max_value=100000, step=1000, key=f"di_{rol}")
-            datos_juego[rol]["daño_recibido"] = st.number_input(f"Daño recibido ({rol})", min_value=0, max_value=100000, step=1000, key=f"dr_{rol}")
-            datos_juego[rol]["participación"] = st.slider(f"Participación en kills (%) ({rol})", 0, 100, key=f"p_{rol}")
+        st.subheader(rol)
+        stats = acumulado[rol]
+        promedio_dano = stats["dano"] // len(hoy_partidas)
+        promedio_recibido = stats["recibido"] // len(hoy_partidas)
+        promedio_oro = stats["oro"] // len(hoy_partidas)
+        promedio_part = stats["participacion"] // len(hoy_partidas)
 
-    comentario_partida = st.text_area("Comentarios o incidencias del juego (opcional)", max_chars=300)
+        st.write(f"{promedio_dano}")
+        calificacion = calificar_desempeno(promedio_dano, promedio_recibido, promedio_oro, promedio_part)
+        st.write(f"Calificación: {calificacion}")
 
-    submitted = st.form_submit_button("Guardar partida")
-    if submitted:
-        st.session_state["partidas"].append({
-            "fecha": datetime.now().strftime("%Y-%m-%d"),
-            "datos": datos_juego,
-            "comentario": comentario_partida.strip()
-        })
-        st.success("Partida guardada correctamente.")
+        feedback = generar_feedback(promedio_dano, promedio_oro, promedio_part)
+        if feedback:
+            st.write("Feedback detallado:")
+            st.markdown("\n".join([f"- {f}" for f in feedback]))
 
-st.subheader("Análisis diario")
-if st.session_state["partidas"]:
-    hoy = datetime.now().strftime("%Y-%m-%d")
-    hoy_partidas = [p for p in st.session_state["partidas"] if p["fecha"] == hoy]
+    # Análisis básico de comentarios
+    comentarios_relevantes = [p.get("comentario", "") for p in hoy_partidas if len(p.get("comentario", "")) > 20]
 
-    if hoy_partidas:
-        acumulado = {rol: {m: 0 for m in metricas} for rol in roles}
-        for partida in hoy_partidas:
-            for rol in roles:
-                for m in metricas:
-                    acumulado[rol][m] += partida["datos"][rol][m]
-
-        for rol in roles:
-            prom = {m: acumulado[rol][m] / len(hoy_partidas) for m in metricas}
-
-            msg = f"🎯 **{rol.upper()}**\n"
-            if prom["muertes"] > 5:
-                msg += "- Estás muriendo mucho. Revisa tu posicionamiento y toma de decisiones.\n"
-            if prom["participación"] < 50:
-                msg += "- Tu participación es baja. Intenta estar más presente en peleas grupales.\n"
-            if prom["oro"] < 8000:
-                msg += "- Oro por partida bajo. Mejora tu farmeo o toma mejores objetivos.\n"
-            if prom["daño_infligido"] < 30000:
-                msg += "- El daño infligido es bajo. Asegúrate de impactar en las peleas.\n"
-
-            comentarios_relevantes = [
-                p.get("comentario", "") for p in hoy_partidas if len(p.get("comentario", "")) > 20
-            ]
-            feedback_extra = ""
-            if comentarios_relevantes:
-                for c in comentarios_relevantes:
-                    cl = c.lower()
-                    if "afk" in cl:
-                        feedback_extra += "- Hubo un jugador ausente (AFK). Considerar estrategias de recuperación.\n"
-                    if "visión" in cl or "vision" in cl:
-                        feedback_extra += "- Se mencionó falta de visión en el mapa. Mejora el uso de centinelas.\n"
-                    if "tilt" in cl or "mal ambiente" in cl:
-                        feedback_extra += "- Se detectó desmotivación o mal ambiente. Refuerza comunicación positiva.\n"
-                    if "presión" in cl:
-                        feedback_extra += "- Se mencionó presión en línea. Evalúa pedir apoyo o jugar más seguro.\n"
-
-            if feedback_extra:
-                msg += "\n📌 **Comentarios detectados:**\n" + feedback_extra
-
-            st.markdown(msg)
-    else:
-        st.info("No hay partidas registradas hoy.")
-else:
-    st.info("Aún no se han registrado partidas.")
+    if comentarios_relevantes:
+        st.subheader("\U0001F9E0 Comentarios detectados:")
+        for comentario in comentarios_relevantes:
+            analisis = []
+            if "afk" in comentario.lower():
+                analisis.append("⚠️ Se reportó un jugador AFK.")
+            if "visión" in comentario.lower() or "ward" in comentario.lower():
+                analisis.append("👁️ Falta de visión mencionada. Refuerza uso de sentinelas y control de mapa.")
+            if "tilt" in comentario.lower() or "flame" in comentario.lower():
+                analisis.append("😠 Posible mal ambiente. Refuerza comunicación positiva y ánimo del equipo.")
+            if analisis:
+                st.markdown(f"**Comentario:** _{comentario}_")
+                st.markdown("\n".join(analisis))
