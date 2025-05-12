@@ -167,7 +167,7 @@ if "usuario" in st.session_state:
             stats = acumulado[rol]
             # No dividir por el número de partidas, acumulamos los valores
             promedio = {k: stats[k] for k in stats}
-            maximos = {"Daño Infligido":100000, "Daño Recibido":100000, "Oro Total":15000, "Participación":100}
+            maximos = {"Daño Infligido":200000, "Daño Recibido":200000, "Oro Total":20000, "Participación":100}
             valores_norm = [promedio["dano"], promedio["recibido"], promedio["oro"], promedio["participacion"]]
             feedback, calif, percentiles = calificar_desempeno(valores_norm, rol, maximos)
             resumen[rol] = {
