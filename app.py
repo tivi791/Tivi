@@ -101,7 +101,7 @@ if st.session_state.get("logged_in", False):
     tab1, tab2, tab3, tab4 = st.tabs([tr["registro"], tr["historial"], tr["promedio"], tr["feedback"]])
 
     with tab1:
-        st.markdown("### 📌 Ingresa los datos por línea:")
+        st.markdown("### 📌 Ingresa los datos por línea: ")
         for linea in lineas:
             with st.expander(f"📍 {linea}", expanded=False):
                 oro = st.number_input(f"{linea} - {tr['oro']}", min_value=0, step=100, key=f"oro_{linea}")
@@ -156,34 +156,30 @@ if st.session_state.get("logged_in", False):
             st.session_state.partidas_dia.append(df.copy())
             st.success(tr["guardado"])
 
-    # Tab 2: Historial
     with tab2:
-        if st.session_state.partidas_dia:
-            st.write("### 📚 Historial de partidas")
+        # Mostrar historial de partidas del día
+        if "partidas_dia" in st.session_state and st.session_state.partidas_dia:
             historial_df = pd.concat(st.session_state.partidas_dia, ignore_index=True)
-            st.dataframe(historial_df)
+            st.write(historial_df)
         else:
-            st.warning("No hay partidas guardadas aún.")
+            st.write("No hay partidas guardadas.")
 
-    # Tab 3: Promedio
     with tab3:
-        if st.session_state.partidas_dia:
-            promedio_df = pd.concat(st.session_state.partidas_dia, ignore_index=True)
+        # Calcular y mostrar el promedio de rendimiento
+        if "partidas_dia" in st.session_state and st.session_state.partidas_dia:
+            promedio_df = pd.concat(st.session_state.partidas_dia, ignore_index=True).select_dtypes(include=["number"])
             promedio = promedio_df.mean()
-            st.write("### 📈 Promedio de rendimiento")
             st.write(promedio)
         else:
-            st.warning("No hay partidas guardadas aún.")
+            st.write("No hay partidas para calcular el promedio.")
 
-    # Tab 4: Feedback
     with tab4:
-        if st.session_state.partidas_dia:
+        # Mostrar feedback
+        if "partidas_dia" in st.session_state and st.session_state.partidas_dia:
             feedback_df = pd.concat(st.session_state.partidas_dia, ignore_index=True)
-            st.write("### 🗣️ Feedback")
-            for idx, row in feedback_df.iterrows():
-                st.write(f"Línea: {row['Línea']}")
-                st.write(f"Rendimiento: {row[tr['rendimiento']]} - {row['Feedback']}")
+            feedback_mensajes = feedback_df["Feedback"].value_counts()
+            st.write(feedback_mensajes)
         else:
-            st.warning("No hay partidas guardadas aún.")
+            st.write("No hay partidas para generar retroalimentación.")
 else:
     st.warning("Por favor, inicia sesión para continuar.")
