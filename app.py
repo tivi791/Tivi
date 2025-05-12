@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import altair as alt
@@ -78,7 +79,6 @@ T = {
 
 tr = T[idioma]
 
-# Login
 st.title(tr["titulo"])
 username = st.text_input("Nombre de usuario")
 password = st.text_input("Contraseña", type="password")
@@ -178,7 +178,6 @@ if st.session_state.get("logged_in", False):
             ).properties(width=700)
             st.altair_chart(chart, use_container_width=True)
 
-            # Guardar gráfico
             fig, ax = plt.subplots(figsize=(10, 5))
             for var in ["Oro", "Daño Infligido", "Daño Recibido", "Participación (%)", tr["rendimiento"]]:
                 ax.plot(promedio["Línea"], promedio[var], marker='o', label=var)
@@ -201,39 +200,25 @@ if st.session_state.get("logged_in", False):
         else:
             st.write("No hay partidas para mostrar retroalimentación.")
 
-# Exportar a PDF
-if st.button(tr["exportar"]):
-    if not promedio.empty and grafico_path:
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, txt="Reporte Diario de Rendimiento", ln=True, align="C")
-        pdf.ln(10)
-        pdf.cell(200, 10, txt="Promedio de rendimiento por línea", ln=True)
-
-        # Exportar tabla promedio
-        for index, row in promedio.iterrows():
-            pdf.cell(40, 10, row["Línea"], border=1)
-            pdf.cell(40, 10, str(row["Oro"]), border=1)
-            pdf.cell(40, 10, str(row["Daño Infligido"]), border=1)
-            pdf.cell(40, 10, str(row["Daño Recibido"]), border=1)
-            pdf.cell(40, 10, str(row["Participación (%)"]), border=1)
-            pdf.cell(40, 10, str(row[tr["rendimiento"]]), border=1)
-            pdf.ln()
-
-        # Agregar gráficos al PDF
-        if grafico_path:
-            pdf.image(grafico_path, x=10, y=30, w=190)
-            pdf.ln(100)
-
-        # Agregar feedback
-        for index, row in promedio.iterrows():
-            pdf.cell(200, 10, f"Feedback para {row['Línea']}: {feedback(row[tr['rendimiento']])}", ln=True)
-
-        # Generar PDF sin codificación adicional
-        pdf.output("registro_diario.pdf")
-
-        # Descargar el PDF
-        st.download_button(label=tr["exportar"], data=open("registro_diario.pdf", "rb"), file_name="registro_diario.pdf", mime="application/pdf")
-    else:
-        st.warning("No hay suficientes datos para generar el PDF.")
+    if st.button(tr["exportar"]):
+        if not promedio.empty and grafico_path:
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=12)
+            pdf.cell(200, 10, txt="Reporte Diario de Rendimiento", ln=True, align="C")
+            pdf.ln(10)
+            pdf.cell(200, 10, txt="Promedio de rendimiento por línea", ln=True)
+            for index, row in promedio.iterrows():
+                pdf.cell(40, 10, row["Línea"], border=1)
+                pdf.cell(40, 10, str(round(row["Oro"], 2)), border=1)
+                pdf.cell(40, 10, str(round(row["Daño Infligido"], 2)), border=1)
+                pdf.cell(40, 10, str(round(row["Daño Recibido"], 2)), border=1)
+                pdf.cell(40, 10, str(round(row["Participación (%)"], 2)), border=1)
+                pdf.cell(40, 10, str(round(row[tr["rendimiento"]], 2)), border=1)
+                pdf.ln()
+            if grafico_path:
+                pdf.image(grafico_path, x=10, y=pdf.get_y(), w=190)
+            pdf_path = "registro_diario.pdf"
+            pdf.output(pdf_path)
+            with open(pdf_path, "rb") as f:
+                st.download_button(label=tr["exportar"], data=f, file_name=pdf_path, mime="application/pdf")
