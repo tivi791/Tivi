@@ -66,16 +66,18 @@ def generar_grafico(datos, titulo, maximos):
     categorias = list(datos.keys())
     valores = [datos[c] for c in categorias]
     valores_norm = [(v / maximos.get(c, 1)) * 100 for v, c in zip(valores, categorias)]  # Se asegura que 'maximos' tenga un valor por defecto
-    valores_norm += valores_norm[:1]
+    valores_norm += valores_norm[:1]  # Se agrega el primer valor al final para cerrar el gráfico
     ang = [n/float(len(categorias))*2*pi for n in range(len(categorias))]
-    ang += ang[:1]
+    ang += ang[:1]  # Añadimos el primer ángulo para cerrar el gráfico
+
     fig, ax = plt.subplots(figsize=(6,6), subplot_kw=dict(polar=True))
     ax.plot(ang, valores_norm, color='#FFD700', linewidth=2)
     ax.fill(ang, valores_norm, color='#FFD700', alpha=0.3)
-    ax.set_xticks(ang[:-1])
+    ax.set_xticks(ang[:-1])  # Excluimos el último ángulo repetido
     ax.set_xticklabels(categorias, color='white', fontsize=12)
-    ax.set_yticklabels([])
+    ax.set_yticklabels([])  # No mostrar las etiquetas del eje Y
     ax.set_title(titulo, color='white')
+    
     buf = io.BytesIO()
     plt.savefig(buf, format='png', bbox_inches='tight', facecolor='#0a0a0a')
     buf.seek(0)
