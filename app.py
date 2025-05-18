@@ -22,17 +22,17 @@ tr = {
     "grafico": "📊 Comparativa Visual",
     "feedback": "🗣️ Feedback",
     "jugador": "👤 Rendimiento por Línea",
-    "guardar": "💾 Guardar partida",
-    "exportar": "📤 Exportar a HTML",
+    "guardar": "📅 Guardar partida",
+    "exportar": "📄 Exportar a HTML",
     "rendimiento": "Rendimiento (%)",
-    "kda": "📝 Registro KDA"  # --- CAMBIO: nuevo menú
+    "kda": "📝 Registro KDA"
 }
 
 # — Sidebar de navegación —
 st.sidebar.title("Menú")
 seccion = st.sidebar.radio("", [
     tr["registro"],
-    tr["kda"],           # --- CAMBIO: nueva pestaña
+    tr["kda"],
     tr["historial"],
     tr["promedio"],
     tr["feedback"],
@@ -61,7 +61,7 @@ if "partidas" not in st.session_state:
     st.session_state.partidas = []
 if "contador" not in st.session_state:
     st.session_state.contador = 1
-if "kda_partidas" not in st.session_state:  # --- CAMBIO: lista para KDA por separado
+if "kda_partidas" not in st.session_state:
     st.session_state.kda_partidas = []
 if "kda_contador" not in st.session_state:
     st.session_state.kda_contador = 1
@@ -81,20 +81,20 @@ problemas_comunes = [
 ]
 
 pesos = {
-    "TOPLANER": {"oro":0.2, "dano":0.3, "part":0.2, "kda":0.3},
-    "JUNGLA":   {"oro":0.2, "dano":0.25,"part":0.25,"kda":0.3},
-    "MIDLANER": {"oro":0.2, "dano":0.3, "part":0.2, "kda":0.3},
-    "ADC":      {"oro":0.2, "dano":0.2, "part":0.3, "kda":0.3},
-    "SUPPORT":  {"oro":0.1, "dano":0.1, "part":0.4, "kda":0.4}
+    "TOPLANER": {"oro": 0.2, "dano": 0.3, "part": 0.2, "kda": 0.3},
+    "JUNGLA":   {"oro": 0.2, "dano": 0.25, "part": 0.25, "kda": 0.3},
+    "MIDLANER": {"oro": 0.2, "dano": 0.3, "part": 0.2, "kda": 0.3},
+    "ADC":      {"oro": 0.2, "dano": 0.2, "part": 0.3, "kda": 0.3},
+    "SUPPORT":  {"oro": 0.1, "dano": 0.1, "part": 0.4, "kda": 0.4}
 }
 
 def calcular_puntaje(fila):
     rol = fila["Línea"]
     p = pesos[rol]
-    kda = (fila.get("Asesinatos",0) + fila.get("Asistencias",0)) / max(1, fila.get("Muertes",0))
-    val_oro = fila.get("Oro",0) / 15000
-    val_dano = fila.get("Daño Infligido",0) / 100000
-    val_part = fila.get("Participación (%)",0) / 100
+    kda = (fila.get("Asesinatos", 0) + fila.get("Asistencias", 0)) / max(1, fila.get("Muertes", 0))
+    val_oro = fila.get("Oro", 0) / 15000
+    val_dano = fila.get("Daño Infligido", 0) / 100000
+    val_part = fila.get("Participación (%)", 0) / 100
     eficiencia = (
         val_oro * p["oro"] +
         val_dano * p["dano"] +
@@ -105,15 +105,15 @@ def calcular_puntaje(fila):
 
 def sugerencias(fila):
     msgs = []
-    if fila.get("Daño Infligido",0) < 20000:
+    if fila.get("Daño Infligido", 0) < 20000:
         msgs.append("🔸 Aumenta tu farmeo y participa en peleas tempranas.")
-    if fila.get("Participación (%)",0) < 50:
+    if fila.get("Participación (%)", 0) < 50:
         msgs.append("🔸 Sé más activo en objetivos de equipo.")
-    if (fila.get("Asesinatos",0) + fila.get("Asistencias",0)) / max(1, fila.get("Muertes",0)) < 1:
+    if (fila.get("Asesinatos", 0) + fila.get("Asistencias", 0)) / max(1, fila.get("Muertes", 0)) < 1:
         msgs.append("🔸 Mejora tu posicionamiento para no morir tanto.")
     return "\n".join(msgs) or "✅ Buen equilibrio de métricas."
 
-# — Sección REGISTRO SIN KDA (CAMBIO: ya no incluye Asesinatos, Muertes ni Asistencias) —
+# — Sección REGISTRO SIN KDA —
 if seccion == tr["registro"]:
     st.header(tr["registro"])
     datos = []
@@ -124,11 +124,7 @@ if seccion == tr["registro"]:
             oro = st.number_input("Oro", 0, step=100, key=f"oro_{linea}")
             part = st.slider("Participación %", 0, 100, key=f"part_{linea}")
 
-            seleccion = st.multiselect(
-                "Problemas detectados",
-                problemas_comunes,
-                key=f"pc_{linea}"
-            )
+            seleccion = st.multiselect("Problemas detectados", problemas_comunes, key=f"pc_{linea}")
             otro = st.text_input("Otro problema (escribe aquí)", key=f"otro_{linea}")
             comentarios = seleccion.copy()
             if otro:
@@ -137,7 +133,6 @@ if seccion == tr["registro"]:
             datos.append({
                 "Línea": linea, "Oro": oro, "Daño Infligido": dano,
                 "Daño Recibido": rec, "Participación (%)": part,
-                # KDA eliminado de acá
                 "Comentarios": "; ".join(comentarios)
             })
     if st.button(tr["guardar"]):
@@ -148,7 +143,6 @@ if seccion == tr["registro"]:
         st.session_state.contador += 1
         st.success("Partida guardada correctamente")
 
-# — Nueva pestaña para registrar solo KDA —  # --- CAMBIO: pestaña KDA ---
 elif seccion == tr["kda"]:
     st.header(tr["kda"])
     datos_kda = []
@@ -170,7 +164,6 @@ elif seccion == tr["kda"]:
         st.session_state.kda_contador += 1
         st.success("KDA guardado correctamente")
 
-# — Sección HISTORIAL — (mostramos ambos históricos separados)
 elif seccion == tr["historial"]:
     st.header(tr["historial"])
     if st.session_state.partidas or st.session_state.kda_partidas:
@@ -185,8 +178,6 @@ elif seccion == tr["historial"]:
     else:
         st.info("No hay partidas registradas")
 
-# — Las demás secciones quedan igual —
-
 elif seccion == tr["promedio"]:
     st.header(tr["promedio"])
     if st.session_state.partidas:
@@ -195,15 +186,11 @@ elif seccion == tr["promedio"]:
         st.dataframe(prom)
 
         vals = prom.melt("Línea", ["Oro", "Daño Infligido", "Daño Recibido"])
-        ch1 = alt.Chart(vals).mark_bar().encode(
-            x="Línea", y="value", color="variable"
-        ).properties(title="Valores Numéricos", width=600)
+        ch1 = alt.Chart(vals).mark_bar().encode(x="Línea", y="value", color="variable")
         st.altair_chart(ch1, use_container_width=True)
 
         pct = prom.melt("Línea", ["Participación (%)", "Rendimiento"])
-        ch2 = alt.Chart(pct).mark_bar().encode(
-            x="Línea", y="value", color="variable"
-        ).properties(title="Porcentajes", width=600)
+        ch2 = alt.Chart(pct).mark_bar().encode(x="Línea", y="value", color="variable")
         st.altair_chart(ch2, use_container_width=True)
     else:
         st.info("No hay datos para calcular promedio")
@@ -219,31 +206,18 @@ elif seccion == tr["feedback"]:
             bar = int(round(avg)) if pd.notna(avg) else 0
             bar = max(0, min(bar, 100))
             st.progress(bar)
-            st.write(f"**Rendimiento Promedio:** {round(avg,2)}%")
-            suger = sub.apply(sugerencias, axis=1)
-            for i, s in enumerate(suger):
-                st.write(f"- Partida {i+1}: {s}")
+            st.write(f"**Rendimiento Promedio:** {avg:.2f}%")
+            for _, fila in sub.iterrows():
+                st.markdown(sugerencias(fila))
     else:
-        st.info("No hay partidas registradas")
+        st.info("No hay partidas para mostrar feedback")
 
 elif seccion == tr["jugador"]:
     st.header(tr["jugador"])
     if st.session_state.partidas:
         df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        lin = st.selectbox("Selecciona Línea", lineas)
-        sub = df_all[df_all["Línea"] == lin]
+        jugador = st.selectbox("Selecciona una línea", lineas)
+        sub = df_all[df_all["Línea"] == jugador]
         st.dataframe(sub)
     else:
-        st.info("No hay datos para mostrar")
-
-# — Exportar todo a HTML —
-st.sidebar.markdown("---")
-if st.sidebar.button(tr["exportar"]):
-    if st.session_state.partidas:
-        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        html = df_all.to_html()
-        b64 = base64.b64encode(html.encode()).decode()
-        href = f'<a href="data:file/html;base64,{b64}" download="partidas.html">Descargar partidas</a>'
-        st.sidebar.markdown(href, unsafe_allow_html=True)
-    else:
-        st.sidebar.info("No hay datos para exportar")
+        st.info("No hay partidas registradas")
