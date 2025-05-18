@@ -3,6 +3,8 @@ import pandas as pd
 import altair as alt
 import base64
 from datetime import datetime
+from io import BytesIO
+import matplotlib.pyplot as plt
 
 # — Diccionario de usuarios y contraseñas —
 USUARIOS = {"Tivi": "2107", "Ghost": "203"}
@@ -111,7 +113,49 @@ def sugerencias(fila):
         msgs.append("🔸 Mejora tu posicionamiento para no morir tanto.")
     return "\n".join(msgs) or "✅ Buen equilibrio de métricas."
 
-# — Sección REGISTRO SIN KDA (CAMBIO: ya no incluye Asesinatos, Muertes ni Asistencias) —
+def exportar_html(df_partidas, df_promedios, df_feedback, chart, linea_sel):
+    # Exportar tabla, promedios y feedback como HTML simple
+    html = f"""
+    <html><head><title>Reporte WOLF SEEKERS</title></head><body>
+    <h1>Reporte de partidas</h1>
+    {df_partidas.to_html(index=False)}
+
+    <h2>Promedios de rendimiento por línea</h2>
+    {df_promedios.to_html(index=False)}
+
+    <h2>Feedback por línea</h2>
+    {df_feedback.to_html(index=False)}
+
+    <h2>Gráfico de rendimiento por línea: {linea_sel}</h2>
+    """
+
+    # Convertir gráfico Altair a PNG para embebido (necesita selenium y altair_saver si quieres exportar)
+    # Como alternativa, usar matplotlib para generar gráfico similar y embebido en base64:
+
+    fig, ax = plt.subplots(figsize=(7,4))
+    df_linea = df_partidas[df_partidas["Línea"]==linea_sel]
+    ax.plot(df_linea["Partida"], df_linea["Rendimiento"], marker='o')
+    ax.set_title(f"Rendimiento a lo largo de las partidas - {linea_sel}")
+    ax.set_xlabel("Partida")
+    ax.set_ylabel("Rendimiento (%)")
+    ax.grid(True)
+
+    buf = BytesIO()
+    fig.savefig(buf, format="png")
+    plt.close(fig)
+    data = base64.b64encode(buf.getbuffer()).decode("ascii")
+    img_tag = f'<img src="data:image/png;base64,{data}" alt="Gráfico Rendimiento" />'
+
+    html += img_tag
+    html += "</body></html>"
+    return html
+
+def descargar_html(html, nombre_archivo="reporte_wolf_seekers.html"):
+    b64 = base64.b64encode(html.encode()).decode()
+    href = f'<a href="data:text/html;base64,{b64}" download="{nombre_archivo}">📥 Descargar reporte HTML</a>'
+    st.markdown(href, unsafe_allow_html=True)
+
+# — Sección REGISTRO SIN KDA —
 if seccion == tr["registro"]:
     st.header(tr["registro"])
     datos = []
@@ -146,7 +190,7 @@ if seccion == tr["registro"]:
         st.session_state.contador += 1
         st.success(f"Partida {partida_id} guardada correctamente")
 
-# — Nueva pestaña para registrar solo KDA —  
+# — Pestaña KDA —
 elif seccion == tr["kda"]:
     st.header(tr["kda"])
     if not st.session_state.partidas:
@@ -182,62 +226,95 @@ elif seccion == tr["historial"]:
             st.subheader("Partidas completas")
             hist = pd.concat(st.session_state.partidas, ignore_index=True)
             st.dataframe(hist)
-
         if st.session_state.kda_partidas:
-            st.subheader("Registros solo de KDA")
-            hist_kda = pd.concat(st.session_state.kda_partidas, ignore_index=True)
-            st.dataframe(hist_kda)
-
-            st.subheader("Datos combinados (por Partida y Línea)")
-            try:
-                df_partidas = pd.concat(st.session_state.partidas, ignore_index=True)
-                df_kda = pd.concat(st.session_state.kda_partidas, ignore_index=True)
-                df_merge = pd.merge(df_partidas, df_kda, on=["Partida", "Línea"], how="outer")
-                st.dataframe(df_merge)
-            except Exception as e:
-                st.error(f"Error uniendo datos: {e}")
+            st.subheader("Datos KDA registrados")
+            kda_df = pd.concat(st.session_state.kda_partidas, ignore_index=True)
+            st.dataframe(kda_df)
     else:
-        st.info("No hay partidas registradas")
+        st.info("No hay partidas registradas aún.")
 
 # — Sección PROMEDIO —
 elif seccion == tr["promedio"]:
     st.header(tr["promedio"])
-    if st.session_state.partidas:
-        df = pd.concat(st.session_state.partidas, ignore_index=True)
-        promedios = df.groupby("Línea")["Rendimiento"].mean().reset_index()
-        st.dataframe(promedios)
+    if not st.session_state.partidas:
+        st.info("No hay datos para mostrar promedios.")
+        st.stop()
+    df_all = pd.concat(st.session_state.partidas, ignore_index=True)
+
+    # Si hay datos KDA, unirlos a los datos principales
+    if st.session_state.kda_partidas:
+        df_kda_all = pd.concat(st.session_state.kda_partidas, ignore_index=True)
+        df_all = df_all.merge(df_kda_all, on=["Línea", "Partida"], how="left").fillna(0)
+        df_all["Rendimiento"] = df_all.apply(calcular_puntaje, axis=1)
     else:
-        st.info("No hay datos para calcular promedios")
+        # rellenar columnas KDA para evitar errores
+        df_all["Asesinatos"] = 0
+        df_all["Muertes"] = 0
+        df_all["Asistencias"] = 0
+
+    promedios = df_all.groupby("Línea")["Rendimiento"].mean().reset_index()
+    promedios["Rendimiento"] = promedios["Rendimiento"].round(2)
+    st.dataframe(promedios)
 
 # — Sección FEEDBACK —
 elif seccion == tr["feedback"]:
     st.header(tr["feedback"])
-    if st.session_state.partidas:
-        df = pd.concat(st.session_state.partidas, ignore_index=True)
-        problemas = df.groupby("Línea")["Comentarios"].apply(lambda x: "; ".join(x)).reset_index()
-        st.dataframe(problemas)
-    else:
-        st.info("No hay datos para feedback")
+    if not st.session_state.partidas:
+        st.info("No hay datos para mostrar feedback.")
+        st.stop()
+    df_all = pd.concat(st.session_state.partidas, ignore_index=True)
 
-# — Sección RENDIMIENTO POR LÍNEA — CAMBIO: gráfico de barras a gráfico de líneas
+    # Agregar KDA si hay
+    if st.session_state.kda_partidas:
+        df_kda_all = pd.concat(st.session_state.kda_partidas, ignore_index=True)
+        df_all = df_all.merge(df_kda_all, on=["Línea", "Partida"], how="left").fillna(0)
+
+    df_all["Feedback"] = df_all.apply(sugerencias, axis=1)
+    feedback_linea = df_all.groupby("Línea")["Feedback"].apply(lambda x: "<br>".join(x)).reset_index()
+    st.markdown(
+        "\n\n".join([f"### {row['Línea']}\n- {row['Feedback'].replace('<br>', '<br>- ')}" for _, row in feedback_linea.iterrows()]),
+        unsafe_allow_html=True
+    )
+
+# — Sección JUGADOR (Gráfico) —
 elif seccion == tr["jugador"]:
     st.header(tr["jugador"])
-    if st.session_state.partidas:
-        df = pd.concat(st.session_state.partidas, ignore_index=True)
-        linea_sel = st.selectbox("Selecciona la Línea", lineas)
-        df_linea = df[df["Línea"] == linea_sel]
-        if not df_linea.empty:
-            chart = alt.Chart(df_linea).mark_line(point=True).encode(
-                x=alt.X("Partida", sort=None),
-                y="Rendimiento",
-                tooltip=["Partida", "Rendimiento", "Comentarios"]
-            ).properties(
-                width=700,
-                height=400,
-                title=f"Rendimiento a lo largo de las partidas - {linea_sel}"
-            )
-            st.altair_chart(chart, use_container_width=True)
-        else:
-            st.info("No hay datos para esta línea")
+    if not st.session_state.partidas:
+        st.info("No hay datos para mostrar gráficos.")
+        st.stop()
+
+    df_all = pd.concat(st.session_state.partidas, ignore_index=True)
+    if st.session_state.kda_partidas:
+        df_kda_all = pd.concat(st.session_state.kda_partidas, ignore_index=True)
+        df_all = df_all.merge(df_kda_all, on=["Línea", "Partida"], how="left").fillna(0)
+        df_all["Rendimiento"] = df_all.apply(calcular_puntaje, axis=1)
+
+    linea_sel = st.selectbox("Selecciona la línea", lineas)
+    df_linea = df_all[df_all["Línea"] == linea_sel]
+
+    if df_linea.empty:
+        st.warning("No hay datos para esta línea.")
     else:
-        st.info("No hay datos para mostrar")
+        chart = alt.Chart(df_linea).mark_line(point=True).encode(
+            x="Partida",
+            y="Rendimiento",
+            tooltip=["Partida", "Rendimiento"]
+        ).properties(
+            width=700,
+            height=400,
+            title=f"Rendimiento a lo largo de las partidas - {linea_sel}"
+        )
+        st.altair_chart(chart)
+
+        # Botón para exportar reporte completo a HTML
+        if st.button(tr["exportar"]):
+            # Promedios
+            promedios = df_all.groupby("Línea")["Rendimiento"].mean().reset_index()
+            promedios["Rendimiento"] = promedios["Rendimiento"].round(2)
+
+            # Feedback
+            df_all["Feedback"] = df_all.apply(sugerencias, axis=1)
+            feedback_linea = df_all.groupby("Línea")["Feedback"].apply(lambda x: " | ".join(x)).reset_index()
+
+            html = exportar_html(df_all, promedios, feedback_linea, chart, linea_sel)
+            descargar_html(html)
