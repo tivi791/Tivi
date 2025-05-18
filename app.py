@@ -63,8 +63,6 @@ if "partidas" not in st.session_state:
     st.session_state.partidas = []
 if "contador" not in st.session_state:
     st.session_state.contador = 1
-if "kda_partidas" not in st.session_state:
-    st.session_state.kda_partidas = []
 
 lineas = ["TOPLANER", "JUNGLA", "MIDLANER", "ADC", "SUPPORT"]
 
@@ -179,7 +177,10 @@ if seccion == tr["registro"]:
             datos.append({
                 "Línea": linea, "Oro": oro, "Daño Infligido": dano,
                 "Daño Recibido": rec, "Participación (%)": part,
-                "Comentarios": "; ".join(comentarios)
+                "Comentarios": "; ".join(comentarios),
+                "Asesinatos": 0,
+                "Muertes": 0,
+                "Asistencias": 0
             })
     if st.button(tr["guardar"]):
         df = pd.DataFrame(datos)
@@ -203,6 +204,7 @@ elif seccion == tr["kda"]:
     ases = st.number_input("Asesinatos", 0, 20, step=1)
     muer = st.number_input("Muertes", 0, 20, step=1)
     asist = st.number_input("Asistencias", 0, 20, step=1)
+
     if st.button("Guardar KDA"):
         idx = int(sel_partida.split()[-1]) - 1
         df = st.session_state.partidas[idx]
@@ -211,79 +213,111 @@ elif seccion == tr["kda"]:
         df["Asistencias"] = asist
         df["Rendimiento"] = df.apply(calcular_puntaje, axis=1)
         st.session_state.partidas[idx] = df
-        st.success(f"KDA guardado para {sel_partida}")
+        st.success("KDA actualizado y rendimiento recalculado")
 
-# — Pestaña HISTORIAL —
+# — HISTORIAL DE PARTIDAS —
 elif seccion == tr["historial"]:
     st.header(tr["historial"])
     if not st.session_state.partidas:
         st.info("No hay partidas registradas aún.")
-    else:
-        for i, df in enumerate(st.session_state.partidas):
-            st.subheader(f"Partida {i+1}")
-            st.dataframe(df)
+        st.stop()
 
-# — Pestaña PROMEDIO —
+    df_hist = pd.concat(st.session_state.partidas, ignore_index=True)
+    st.dataframe(df_hist)
+
+# — PROMEDIOS POR LÍNEA —
 elif seccion == tr["promedio"]:
     st.header(tr["promedio"])
     if not st.session_state.partidas:
-        st.info("No hay partidas para calcular promedios.")
-    else:
-        df_concat = pd.concat(st.session_state.partidas)
-        promedios = df_concat.groupby("Línea").agg({
-            "Rendimiento":"mean",
-            "Oro":"mean",
-            "Daño Infligido":"mean",
-            "Participación (%)":"mean"
-        }).reset_index()
-        promedios["Rendimiento"] = promedios["Rendimiento"].round(2)
-        st.dataframe(promedios)
+        st.info("No hay partidas registradas aún.")
+        st.stop()
 
-# — Pestaña FEEDBACK —
+    df_hist = pd.concat(st.session_state.partidas, ignore_index=True)
+    df_prom = df_hist.groupby("Línea").agg({
+        "Oro": "mean",
+        "Daño Infligido": "mean",
+        "Daño Recibido": "mean",
+        "Participación (%)": "mean",
+        "Rendimiento": "mean"
+    }).reset_index()
+    df_prom["Rendimiento"] = df_prom["Rendimiento"].round(2)
+    st.dataframe(df_prom)
+
+# — FEEDBACK GENERAL POR LÍNEA —
 elif seccion == tr["feedback"]:
     st.header(tr["feedback"])
     if not st.session_state.partidas:
-        st.info("No hay partidas registradas para feedback.")
-    else:
-        df_concat = pd.concat(st.session_state.partidas)
-        df_concat["Sugerencias"] = df_concat.apply(sugerencias, axis=1)
-        feedback = df_concat[["Línea","Sugerencias"]].drop_duplicates()
-        st.dataframe(feedback)
+        st.info("No hay partidas registradas aún.")
+        st.stop()
+    df_hist = pd.concat(st.session_state.partidas, ignore_index=True)
 
-# — Pestaña RENDIMIENTO POR LÍNEA (jugador) —
+    data_feedback = []
+    for linea in lineas:
+        df_l = df_hist[df_hist["Línea"] == linea]
+        if df_l.empty:
+            continue
+        promedio_rend = df_l["Rendimiento"].mean()
+        suger = sugerencias(df_l.iloc[-1])
+        data_feedback.append({
+            "Línea": linea,
+            "Rendimiento promedio": round(promedio_rend, 2),
+            "Sugerencias": suger
+        })
+    df_feedback = pd.DataFrame(data_feedback)
+    st.dataframe(df_feedback)
+
+# — RENDIMIENTO POR LÍNEA CON GRÁFICOS —
 elif seccion == tr["jugador"]:
     st.header(tr["jugador"])
     if not st.session_state.partidas:
         st.info("No hay partidas registradas aún.")
         st.stop()
 
-    df_concat = pd.concat(st.session_state.partidas)
-    df_concat["Partida"] = pd.Categorical(df_concat["Partida"],
-                                         categories=[f"Partida {i+1}" for i in range(len(st.session_state.partidas))],
-                                         ordered=True)
+    df_hist = pd.concat(st.session_state.partidas, ignore_index=True)
+    st.selectbox("Selecciona línea para ver rendimiento", lineas, key="linea_graf")
 
-    for linea in lineas:
-        st.subheader(f"{linea}")
-        df_linea = df_concat[df_concat["Línea"]==linea]
-
-        if df_linea.empty:
-            st.write("No hay datos para esta línea.")
-            continue
-
+    linea_sel = st.session_state.linea_graf
+    df_linea = df_hist[df_hist["Línea"] == linea_sel].copy()
+    if df_linea.empty:
+        st.warning(f"No hay datos para {linea_sel}")
+    else:
+        # Gráfico Altair
         chart = alt.Chart(df_linea).mark_line(point=True).encode(
-            x=alt.X("Partida", sort=None),
-            y=alt.Y("Rendimiento", scale=alt.Scale(domain=[0,100])),
+            x="Partida",
+            y="Rendimiento",
             tooltip=["Partida", "Rendimiento"]
-        ).properties(width=700, height=300)
+        ).properties(width=700, height=400, title=f"Rendimiento en {linea_sel} por partida")
+        st.altair_chart(chart, use_container_width=True)
 
-        st.altair_chart(chart)
+# — EXPORTAR A HTML EN EL SIDEBAR —
+if seccion != tr["registro"]:
+    if st.sidebar.button(tr["exportar"]):
+        if not st.session_state.partidas:
+            st.sidebar.warning("No hay datos para exportar.")
+        else:
+            df_partidas = pd.concat(st.session_state.partidas, ignore_index=True)
+            df_promedios = df_partidas.groupby("Línea").agg({
+                "Oro": "mean",
+                "Daño Infligido": "mean",
+                "Daño Recibido": "mean",
+                "Participación (%)": "mean",
+                "Rendimiento": "mean"
+            }).reset_index()
+            df_promedios["Rendimiento"] = df_promedios["Rendimiento"].round(2)
 
-    # Botón para exportar reporte HTML con gráficos (con matplotlib)
-    if st.button(tr["exportar"]):
-        # Preparamos dataframes para exportar
-        promedios = df_concat.groupby("Línea").agg({"Rendimiento":"mean"}).reset_index()
-        promedios["Rendimiento"] = promedios["Rendimiento"].round(2)
-        feedback_df = df_concat[["Línea"]].drop_duplicates()
-        html = exportar_html(df_concat, promedios, feedback_df)
-        descargar_html(html)
+            data_feedback = []
+            for linea in lineas:
+                df_l = df_partidas[df_partidas["Línea"] == linea]
+                if df_l.empty:
+                    continue
+                promedio_rend = df_l["Rendimiento"].mean()
+                suger = sugerencias(df_l.iloc[-1])
+                data_feedback.append({
+                    "Línea": linea,
+                    "Rendimiento promedio": round(promedio_rend, 2),
+                    "Sugerencias": suger
+                })
+            df_feedback = pd.DataFrame(data_feedback)
 
+            html = exportar_html(df_partidas, df_promedios, df_feedback)
+            descargar_html(html)
