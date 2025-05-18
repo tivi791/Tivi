@@ -1,9 +1,7 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
-import matplotlib.pyplot as plt
 import base64
-from datetime import datetime
 
 # — Diccionario de usuarios y contraseñas —
 USUARIOS = {"Tivi": "2107", "Ghost": "203"}
@@ -63,7 +61,6 @@ if "contador" not in st.session_state:
 
 lineas = ["TOPLANER", "JUNGLA", "MIDLANER", "ADC", "SUPPORT"]
 
-# — Lista de problemas comunes para comentarios —
 problemas_comunes = [
     "Poco farmeo",
     "Mala visión / wards",
@@ -76,7 +73,6 @@ problemas_comunes = [
     "Teamfights descoordinadas"
 ]
 
-# — Pesos por rol para el cálculo de puntaje —
 pesos = {
     "TOPLANER": {"oro":0.2, "dano":0.3, "part":0.2, "kda":0.3},
     "JUNGLA":   {"oro":0.2, "dano":0.25,"part":0.25,"kda":0.3},
@@ -85,7 +81,6 @@ pesos = {
     "SUPPORT":  {"oro":0.1, "dano":0.1, "part":0.4, "kda":0.4}
 }
 
-# — Funciones centrales —
 def calcular_puntaje(fila):
     rol = fila["Línea"]
     p = pesos[rol]
@@ -117,40 +112,46 @@ if seccion == tr["registro"]:
     datos = []
     for linea in lineas:
         with st.expander(linea):
-            # Orden corregido: Daño Infligido, Daño Recibido, Oro, Participación
-            dano = st.number_input("Daño Infligido", 0, step=100, key=f"dano_{linea}")
-            rec = st.number_input("Daño Recibido", 0, step=100, key=f"dr_{linea}")
-            oro = st.number_input("Oro", 0, step=100, key=f"oro_{linea}")
-            part = st.slider("Participación %", 0, 100, key=f"part_{linea}")
+            dano = st.number_input(f"Daño Infligido ({linea})", 0, step=100, key=f"dano_{linea}")
+            rec = st.number_input(f"Daño Recibido ({linea})", 0, step=100, key=f"dr_{linea}")
+            oro = st.number_input(f"Oro ({linea})", 0, step=100, key=f"oro_{linea}")
+            part = st.slider(f"Participación % ({linea})", 0, 100, key=f"part_{linea}")
 
-            # Nueva pestaña para KDA y problemas
-            with st.expander("KDA y Problemas"):
-                a = st.number_input("Asesinatos", 0, step=1, key=f"a_{linea}")
-                m = st.number_input("Muertes", 0, step=1, key=f"m_{linea}")
-                asi = st.number_input("Asistencias", 0, step=1, key=f"as_{linea}")
-                seleccion = st.multiselect(
-                    "Problemas detectados",
-                    problemas_comunes,
-                    key=f"pc_{linea}"
-                )
-                otro = st.text_input("Otro problema (escribe aquí)", key=f"otro_{linea}")
+            # NOTA: Usamos un único expander para KDA y problemas fuera del expander línea
+            a = st.number_input(f"Asesinatos ({linea})", 0, step=1, key=f"a_{linea}")
+            m = st.number_input(f"Muertes ({linea})", 0, step=1, key=f"m_{linea}")
+            asi = st.number_input(f"Asistencias ({linea})", 0, step=1, key=f"as_{linea}")
+            seleccion = st.multiselect(
+                f"Problemas detectados ({linea})",
+                problemas_comunes,
+                key=f"pc_{linea}"
+            )
+            otro = st.text_input(f"Otro problema ({linea})", key=f"otro_{linea}")
+
             comentarios = seleccion.copy()
             if otro:
                 comentarios.append(f"Otro: {otro}")
 
             datos.append({
-                "Línea": linea, "Oro": oro, "Daño Infligido": dano,
-                "Daño Recibido": rec, "Participación (%)": part,
-                "Asesinatos": a, "Muertes": m, "Asistencias": asi,
+                "Línea": linea,
+                "Oro": oro,
+                "Daño Infligido": dano,
+                "Daño Recibido": rec,
+                "Participación (%)": part,
+                "Asesinatos": a,
+                "Muertes": m,
+                "Asistencias": asi,
                 "Comentarios": "; ".join(comentarios)
             })
+
     if st.button(tr["guardar"]):
-        df = pd.DataFrame(datos)
-        df["Partida"] = f"Partida {st.session_state.contador}"
-        df["Rendimiento"] = df.apply(calcular_puntaje, axis=1)
-        st.session_state.partidas.append(df)
-        st.session_state.contador += 1
-        st.success("Partida guardada correctamente")
+        if datos:
+            df = pd.DataFrame(datos)
+            df["Partida"] = f"Partida {st.session_state.contador}"
+            df["Rendimiento"] = df.apply(calcular_puntaje, axis=1)
+            st.session_state.partidas.append(df)
+            st.session_state.contador += 1
+            st.success("Partida guardada correctamente")
 
 # — Sección HISTORIAL —
 elif seccion == tr["historial"]:
@@ -195,7 +196,6 @@ elif seccion == tr["feedback"]:
             avg = sub["Rendimiento"].mean()
             st.subheader(ln)
 
-            # Clamp y manejo de NaN
             bar = int(round(avg)) if pd.notna(avg) else 0
             bar = max(0, min(bar, 100))
 
@@ -213,21 +213,21 @@ elif seccion == tr["jugador"]:
     st.header(tr["jugador"])
     if st.session_state.partidas:
         df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        lin = st.selectbox("Selecciona Línea", lineas)
-        sub = df_all[df_all["Línea"] == lin]
-        st.dataframe(sub)
-        # Aquí puedes agregar gráficos o análisis por línea
+        rol = st.selectbox("Seleccione Línea", lineas)
+        df_rol = df_all[df_all["Línea"] == rol]
+        if not df_rol.empty:
+            st.line_chart(df_rol.set_index("Partida")["Rendimiento"])
+            st.dataframe(df_rol)
+        else:
+            st.info(f"No hay datos para {rol}")
     else:
-        st.info("No hay datos para mostrar")
+        st.info("No hay partidas registradas")
 
-# — Exportar todo a HTML —
-st.sidebar.markdown("---")
-if st.sidebar.button(tr["exportar"]):
-    if st.session_state.partidas:
+# — Exportar a HTML (botón en cualquier sección) —
+if st.session_state.partidas:
+    if st.button(tr["exportar"]):
         df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        html = df_all.to_html(index=False)
+        html = df_all.to_html()
         b64 = base64.b64encode(html.encode()).decode()
-        href = f'<a href="data:file/html;base64,{b64}" download="WSE_partidas.html">Descargar archivo HTML</a>'
-        st.sidebar.markdown(href, unsafe_allow_html=True)
-    else:
-        st.sidebar.warning("No hay datos para exportar")
+        href = f'<a href="data:text/html;base64,{b64}" download="wolfseekers_partidas.html">Descargar archivo HTML</a>'
+        st.markdown(href, unsafe_allow_html=True)
