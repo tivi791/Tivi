@@ -63,8 +63,10 @@ if "partidas" not in st.session_state:
     st.session_state.partidas = []
 if "contador" not in st.session_state:
     st.session_state.contador = 1
-if "kda_partidas" not in st.session_state:
-    st.session_state.kda_partidas = []
+
+# Acumulado KDA por línea (nuevo dict en session_state)
+if "kda_acumulado" not in st.session_state:
+    st.session_state.kda_acumulado = {linea: {"Asesinatos":0, "Muertes":0, "Asistencias":0} for linea in ["TOPLANER", "JUNGLA", "MIDLANER", "ADC", "SUPPORT"]}
 
 lineas = ["TOPLANER", "JUNGLA", "MIDLANER", "ADC", "SUPPORT"]
 
@@ -179,7 +181,11 @@ if seccion == tr["registro"]:
             datos.append({
                 "Línea": linea, "Oro": oro, "Daño Infligido": dano,
                 "Daño Recibido": rec, "Participación (%)": part,
-                "Comentarios": "; ".join(comentarios)
+                "Comentarios": "; ".join(comentarios),
+                # Inicializamos KDA en 0 para evitar problemas al calcular puntaje
+                "Asesinatos": 0,
+                "Muertes": 0,
+                "Asistencias": 0
             })
     if st.button(tr["guardar"]):
         df = pd.DataFrame(datos)
@@ -188,117 +194,105 @@ if seccion == tr["registro"]:
         df["Rendimiento"] = df.apply(calcular_puntaje, axis=1)
         st.session_state.partidas.append(df)
         st.session_state.contador += 1
-        st.success(f"Partida {partida_id} guardada correctamente")
+        st.success(f"Partida {partida_id} guardada correctamente.")
 
-# — Pestaña KDA (registro total de muertes del día) —
+# — Sección KDA (acumulado) —
 elif seccion == tr["kda"]:
-    st.header("📝 Registro de muertes totales del día")
+    st.header(tr["kda"])
+    st.write("Aquí se registran las estadísticas KDA por línea acumuladas del día.")
 
-    if "muertes_dia" not in st.session_state:
-        st.session_state.muertes_dia = []
+    with st.form("form_kda"):
+        linea_sel = st.selectbox("Selecciona la línea", lineas, key="linea_kda")
+        ases = st.number_input("Asesinatos", min_value=0, step=1, key="ases_kda")
+        muer = st.number_input("Muertes", min_value=0, step=1, key="muer_kda")
+        asis = st.number_input("Asistencias", min_value=0, step=1, key="asis_kda")
+        enviar = st.form_submit_button("Agregar KDA")
 
-    muertes_totales = st.number_input("¿Cuántas veces moriste en total hoy?", min_value=0, step=1)
+        if enviar:
+            kda_act = st.session_state.kda_acumulado[linea_sel]
+            kda_act["Asesinatos"] += ases
+            kda_act["Muertes"] += muer
+            kda_act["Asistencias"] += asis
+            st.success(f"KDA acumulado actualizado para {linea_sel}.")
 
-    if st.button("Guardar muertes del día"):
-        fecha_hoy = datetime.now().strftime("%Y-%m-%d")
-        st.session_state.muertes_dia.append({
-            "Fecha": fecha_hoy,
-            "Muertes Totales": muertes_totales
-        })
-        st.success("Muertes registradas correctamente")
+    # Mostrar tabla con KDA acumulado por línea
+    df_kda = pd.DataFrame([
+        {"Línea": lin,
+         "Asesinatos": vals["Asesinatos"],
+         "Muertes": vals["Muertes"],
+         "Asistencias": vals["Asistencias"],
+         "KDA": round((vals["Asesinatos"] + vals["Asistencias"]) / max(1, vals["Muertes"]), 2)
+        } for lin, vals in st.session_state.kda_acumulado.items()
+    ])
+    st.dataframe(df_kda)
 
-    # Mostrar historial de muertes
-    if st.session_state.muertes_dia:
-        st.subheader("Historial de muertes diarias")
-        df_muertes = pd.DataFrame(st.session_state.muertes_dia)
-        st.dataframe(df_muertes)
-
-# — Pestaña HISTORIAL —
+# — Sección HISTORIAL —
 elif seccion == tr["historial"]:
     st.header(tr["historial"])
     if not st.session_state.partidas:
-        st.info("No hay partidas registradas aún.")
+        st.info("No se han registrado partidas aún.")
     else:
-        for i, df in enumerate(st.session_state.partidas):
-            st.subheader(f"Partida {i+1}")
-            st.dataframe(df[["Línea", "Oro", "Daño Infligido", "Participación (%)", "Asesinatos", "Muertes", "Asistencias", "Rendimiento", "Comentarios"]])
+        df_hist = pd.concat(st.session_state.partidas, ignore_index=True)
+        st.dataframe(df_hist)
 
-# — Pestaña PROMEDIO —
+# — Sección PROMEDIO —
 elif seccion == tr["promedio"]:
     st.header(tr["promedio"])
     if not st.session_state.partidas:
-        st.info("No hay datos para calcular promedios.")
-        st.stop()
+        st.info("No hay datos para mostrar promedios.")
+    else:
+        df_hist = pd.concat(st.session_state.partidas, ignore_index=True)
+        promedios = df_hist.groupby("Línea").agg({
+            "Rendimiento": "mean",
+            "Oro": "mean",
+            "Daño Infligido": "mean",
+            "Daño Recibido": "mean",
+            "Participación (%)": "mean"
+        }).reset_index()
+        promedios["Rendimiento"] = promedios["Rendimiento"].round(2)
+        st.dataframe(promedios)
 
-    df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-    promedios = df_all.groupby("Línea").agg({
-        "Oro": "mean",
-        "Daño Infligido": "mean",
-        "Participación (%)": "mean",
-        "Asesinatos": "mean",
-        "Muertes": "mean",
-        "Asistencias": "mean",
-        "Rendimiento": "mean"
-    }).reset_index()
-
-    promedios = promedios.round(2)
-    st.dataframe(promedios)
-
-# — Pestaña FEEDBACK —
+# — Sección FEEDBACK —
 elif seccion == tr["feedback"]:
     st.header(tr["feedback"])
     if not st.session_state.partidas:
-        st.info("No hay partidas para analizar feedback.")
-        st.stop()
+        st.info("No hay datos para generar feedback.")
+    else:
+        df_hist = pd.concat(st.session_state.partidas, ignore_index=True)
+        df_hist["Sugerencias"] = df_hist.apply(sugerencias, axis=1)
+        st.dataframe(df_hist[["Línea", "Partida", "Rendimiento", "Sugerencias"]])
 
-    df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-    df_all["Sugerencias"] = df_all.apply(sugerencias, axis=1)
-
-    feedback = df_all.groupby("Línea")["Sugerencias"].apply(lambda x: "<br>".join(x)).reset_index()
-    for _, row in feedback.iterrows():
-        st.markdown(f"### {row['Línea']}")
-        st.markdown(row["Sugerencias"].replace("<br>", "\n\n"))
-
-# — Pestaña RENDIMIENTO POR LÍNEA (GRÁFICO) —
+# — Sección RENDIMIENTO POR LÍNEA (jugador) —
 elif seccion == tr["jugador"]:
     st.header(tr["jugador"])
     if not st.session_state.partidas:
-        st.info("No hay partidas registradas.")
-        st.stop()
-
-    df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-    df_all["Partida"] = df_all["Partida"].astype(str)
-
-    linea_sel = st.selectbox("Selecciona línea para graficar", lineas)
-
-    df_linea = df_all[df_all["Línea"]==linea_sel]
-    if df_linea.empty:
-        st.warning("No hay datos para esta línea.")
-        st.stop()
-
-    grafico = alt.Chart(df_linea).mark_line(point=True).encode(
-        x=alt.X("Partida", sort=None),
-        y=alt.Y("Rendimiento", scale=alt.Scale(domain=[0, 100])),
-        tooltip=["Partida", "Rendimiento"]
-    ).properties(
-        title=f"Rendimiento en partidas - {linea_sel}"
-    )
-    st.altair_chart(grafico, use_container_width=True)
-
-# — Exportar reporte completo a HTML con gráficos Matplotlib —
-st.sidebar.markdown("---")
-st.sidebar.header(tr["exportar"])
-if st.sidebar.button(tr["exportar"]):
-    if not st.session_state.partidas:
-        st.sidebar.warning("No hay partidas registradas para exportar.")
+        st.info("No hay datos para mostrar gráficos.")
     else:
-        df_partidas = pd.concat(st.session_state.partidas, ignore_index=True)
-        df_promedios = df_partidas.groupby("Línea").agg({
-            "Oro":"mean","Daño Infligido":"mean","Participación (%)":"mean","Rendimiento":"mean"
-        }).reset_index().round(2)
-        df_feedback = df_partidas.copy()
-        df_feedback["Feedback"] = df_feedback.apply(sugerencias, axis=1)
-        df_feedback = df_feedback[["Línea", "Feedback"]].drop_duplicates()
+        df_hist = pd.concat(st.session_state.partidas, ignore_index=True)
+        linea_sel = st.selectbox("Selecciona la línea", lineas)
+        df_linea = df_hist[df_hist["Línea"]==linea_sel]
 
-        html = exportar_html(df_partidas, df_promedios, df_feedback)
-        descargar_html(html)
+        if df_linea.empty:
+            st.warning("No hay partidas registradas para esta línea.")
+        else:
+            chart = (
+                alt.Chart(df_linea)
+                .mark_line(point=True)
+                .encode(
+                    x=alt.X("Partida:N", title="Partida"),
+                    y=alt.Y("Rendimiento:Q", title="Rendimiento (%)"),
+                    tooltip=["Partida", "Rendimiento"]
+                )
+                .properties(title=f"Rendimiento de {linea_sel} por partida")
+            )
+            st.altair_chart(chart, use_container_width=True)
+
+# — Exportar datos a HTML —
+if st.session_state.partidas:
+    df_partidas = pd.concat(st.session_state.partidas, ignore_index=True)
+    df_promedios = df_partidas.groupby("Línea").agg({"Rendimiento":"mean"}).reset_index()
+    df_promedios["Rendimiento"] = df_promedios["Rendimiento"].round(2)
+    df_feedback = df_partidas.copy()
+    df_feedback["Sugerencias"] = df_feedback.apply(sugerencias, axis=1)
+    html = exportar_html(df_partidas, df_promedios, df_feedback)
+    descargar_html(html)
