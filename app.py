@@ -153,7 +153,6 @@ elif seccion == tr["kda"]:
         st.info("Primero debes registrar al menos una partida en la pestaña Registro")
         st.stop()
 
-    # Seleccionar para qué partida registrar KDA (basado en las partidas guardadas)
     partidas_existentes = [f"Partida {i}" for i in range(1, st.session_state.contador)]
     partida_sel = st.selectbox("Selecciona la Partida", partidas_existentes)
 
@@ -172,11 +171,10 @@ elif seccion == tr["kda"]:
         })
     if st.button("Guardar KDA"):
         df_kda = pd.DataFrame(datos_kda)
-        # En vez de aumentar contador aquí, usamos el mismo contador para partidas completas
         st.session_state.kda_partidas.append(df_kda)
         st.success(f"KDA guardado para {partida_sel}")
 
-# — Sección HISTORIAL — (mostramos ambos históricos separados y unión de datos)  
+# — Sección HISTORIAL —  
 elif seccion == tr["historial"]:
     st.header(tr["historial"])
     if st.session_state.partidas or st.session_state.kda_partidas:
@@ -190,9 +188,7 @@ elif seccion == tr["historial"]:
             hist_kda = pd.concat(st.session_state.kda_partidas, ignore_index=True)
             st.dataframe(hist_kda)
 
-            # Unión de ambos por Partida y Línea para análisis conjunto
             st.subheader("Datos combinados (por Partida y Línea)")
-            # Intentamos hacer merge si ambos tienen datos
             try:
                 df_partidas = pd.concat(st.session_state.partidas, ignore_index=True)
                 df_kda = pd.concat(st.session_state.kda_partidas, ignore_index=True)
@@ -208,7 +204,6 @@ elif seccion == tr["promedio"]:
     st.header(tr["promedio"])
     if st.session_state.partidas:
         df = pd.concat(st.session_state.partidas, ignore_index=True)
-        # Calcular rendimiento promedio por línea
         promedios = df.groupby("Línea")["Rendimiento"].mean().reset_index()
         st.dataframe(promedios)
     else:
@@ -224,7 +219,7 @@ elif seccion == tr["feedback"]:
     else:
         st.info("No hay datos para feedback")
 
-# — Sección RENDIMIENTO POR LÍNEA —
+# — Sección RENDIMIENTO POR LÍNEA — CAMBIO: gráfico de barras a gráfico de líneas
 elif seccion == tr["jugador"]:
     st.header(tr["jugador"])
     if st.session_state.partidas:
@@ -232,14 +227,17 @@ elif seccion == tr["jugador"]:
         linea_sel = st.selectbox("Selecciona la Línea", lineas)
         df_linea = df[df["Línea"] == linea_sel]
         if not df_linea.empty:
-            chart = alt.Chart(df_linea).mark_bar().encode(
-                x="Partida",
+            chart = alt.Chart(df_linea).mark_line(point=True).encode(
+                x=alt.X("Partida", sort=None),
                 y="Rendimiento",
                 tooltip=["Partida", "Rendimiento", "Comentarios"]
+            ).properties(
+                width=700,
+                height=400,
+                title=f"Rendimiento a lo largo de las partidas - {linea_sel}"
             )
             st.altair_chart(chart, use_container_width=True)
         else:
             st.info("No hay datos para esta línea")
     else:
         st.info("No hay datos para mostrar")
-
