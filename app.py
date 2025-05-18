@@ -230,26 +230,20 @@ elif seccion == tr["jugador"]:
     st.header(tr["jugador"])
     if st.session_state.partidas:
         df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        linea_sel = st.selectbox("Selecciona línea", lineas)
-        filtrado = df_all[df_all["Línea"] == linea_sel]
-        st.dataframe(filtrado)
-        if not filtrado.empty:
-            ch = alt.Chart(filtrado).mark_line(point=True).encode(
-                x=alt.X("Partida", sort=None),
-                y="Rendimiento",
-                tooltip=["Partida", "Rendimiento"]
-            ).properties(title=f"Rendimiento en {linea_sel}", width=600)
-            st.altair_chart(ch, use_container_width=True)
+        lin = st.selectbox("Selecciona Línea", lineas)
+        sub = df_all[df_all["Línea"] == lin]
+        st.dataframe(sub)
     else:
         st.info("No hay datos para mostrar")
 
-# — Exportar a HTML (opcional) —
-if st.button(tr["exportar"]):
+# — Exportar todo a HTML —
+st.sidebar.markdown("---")
+if st.sidebar.button(tr["exportar"]):
     if st.session_state.partidas:
         df_all = pd.concat(st.session_state.partidas, ignore_index=True)
         html = df_all.to_html()
         b64 = base64.b64encode(html.encode()).decode()
-        href = f'<a href="data:file/html;base64,{b64}" download="wolf_seekers_historial.html">Descargar historial (HTML)</a>'
-        st.markdown(href, unsafe_allow_html=True)
+        href = f'<a href="data:file/html;base64,{b64}" download="partidas.html">Descargar partidas</a>'
+        st.sidebar.markdown(href, unsafe_allow_html=True)
     else:
-        st.info("No hay datos para exportar")
+        st.sidebar.info("No hay datos para exportar")
