@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
-import matplotlib.pyplot as plt
 import base64
 from datetime import datetime
 
-# — Diccionario de usuarios y contraseñas —
+# -- Diccionario de usuarios y contraseñas --
 USUARIOS = {"Tivi": "2107", "Ghost": "203"}
 
 def login(username, password):
@@ -15,7 +14,7 @@ def login(username, password):
 
 st.set_page_config(page_title="WOLF SEEKERS - Tracker Diario", layout="wide")
 
-# — Traducciones simples —
+# -- Traducciones simples --
 tr = {
     "registro": "📋 Registro",
     "historial": "📚 Historial",
@@ -28,7 +27,7 @@ tr = {
     "rendimiento": "Rendimiento (%)"
 }
 
-# — Sidebar de navegación —
+# -- Sidebar de navegación --
 st.sidebar.title("Menú")
 seccion = st.sidebar.radio("", [
     tr["registro"],
@@ -38,7 +37,7 @@ seccion = st.sidebar.radio("", [
     tr["jugador"]
 ])
 
-# — Login sencillo corregido —
+# -- Login sencillo corregido --
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -55,7 +54,7 @@ if not st.session_state.logged_in:
             st.error(msg)
     st.stop()
 
-# — Estructuras de datos en session_state —
+# -- Estructuras de datos en session_state --
 if "partidas" not in st.session_state:
     st.session_state.partidas = []
 if "contador" not in st.session_state:
@@ -63,7 +62,7 @@ if "contador" not in st.session_state:
 
 lineas = ["TOPLANER", "JUNGLA", "MIDLANER", "ADC", "SUPPORT"]
 
-# — Lista de problemas comunes para comentarios —
+# -- Lista de problemas comunes para comentarios --
 problemas_comunes = [
     "Poco farmeo",
     "Mala visión / wards",
@@ -76,7 +75,7 @@ problemas_comunes = [
     "Teamfights descoordinadas"
 ]
 
-# — Pesos por rol para el cálculo de puntaje —
+# -- Pesos por rol para el cálculo de puntaje --
 pesos = {
     "TOPLANER": {"oro":0.2, "dano":0.3, "part":0.2, "kda":0.3},
     "JUNGLA":   {"oro":0.2, "dano":0.25,"part":0.25,"kda":0.3},
@@ -85,7 +84,7 @@ pesos = {
     "SUPPORT":  {"oro":0.1, "dano":0.1, "part":0.4, "kda":0.4}
 }
 
-# — Funciones centrales —
+# -- Funciones centrales --
 def calcular_puntaje(fila):
     rol = fila["Línea"]
     p = pesos[rol]
@@ -111,7 +110,7 @@ def sugerencias(fila):
         msgs.append("🔸 Mejora tu posicionamiento para no morir tanto.")
     return "\n".join(msgs) or "✅ Buen equilibrio de métricas."
 
-# — Sección REGISTRO con inputs en columnas para compactar —
+# -- Sección REGISTRO con inputs en columnas para compactar --
 if seccion == tr["registro"]:
     st.header(tr["registro"])
     datos = []
@@ -146,14 +145,18 @@ if seccion == tr["registro"]:
                 "Comentarios": "; ".join(comentarios)
             })
     if st.button(tr["guardar"]):
-        df = pd.DataFrame(datos)
-        df["Partida"] = f"Partida {st.session_state.contador}"
-        df["Rendimiento"] = df.apply(calcular_puntaje, axis=1)
-        st.session_state.partidas.append(df)
-        st.session_state.contador += 1
-        st.success("Partida guardada correctamente")
+        # Solo guardar si hay datos (podrías añadir validaciones adicionales)
+        if datos:
+            df = pd.DataFrame(datos)
+            df["Partida"] = f"Partida {st.session_state.contador}"
+            df["Rendimiento"] = df.apply(calcular_puntaje, axis=1)
+            st.session_state.partidas.append(df)
+            st.session_state.contador += 1
+            st.success("Partida guardada correctamente")
+        else:
+            st.warning("No hay datos para guardar.")
 
-# — Sección HISTORIAL —
+# -- Sección HISTORIAL --
 elif seccion == tr["historial"]:
     st.header(tr["historial"])
     if st.session_state.partidas:
@@ -162,7 +165,7 @@ elif seccion == tr["historial"]:
     else:
         st.info("No hay partidas registradas")
 
-# — Sección PROMEDIO y GRÁFICOS (con gráfico de rendimiento general agregado) —
+# -- Sección PROMEDIO y GRÁFICOS (con gráfico de rendimiento general agregado) --
 elif seccion == tr["promedio"]:
     st.header(tr["promedio"])
     if st.session_state.partidas:
@@ -191,79 +194,62 @@ elif seccion == tr["promedio"]:
             y=alt.Y("Rendimiento", scale=alt.Scale(domain=[0, 100])),
             tooltip=["Partida", "Rendimiento"]
         ).properties(
-            title="Evolución del Rendimiento Promedio por Partida",
-            width=700, height=350
+            title="Evolución de Rendimiento Promedio por Partida", width=700, height=300
         )
         st.altair_chart(chart_rend, use_container_width=True)
-    else:
-        st.info("No hay datos para calcular promedio")
 
-# — Sección FEEDBACK DETALLADO con colores en barras —
-elif seccion == tr["feedback"]:
-    st.header(tr["feedback"])
-    if st.session_state.partidas:
-        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        for ln in lineas:
-            sub = df_all[df_all["Línea"] == ln]
-            avg = sub["Rendimiento"].mean()
-            st.subheader(ln)
-
-            # Clamp y manejo de NaN
-            bar = int(round(avg)) if pd.notna(avg) else 0
-            bar = max(0, min(bar, 100))
-
-            # Determinar color según valor
-            if bar > 80:
-                color = "#4caf50"  # verde
-            elif bar >= 50:
-                color = "#ffeb3b"  # amarillo
-            else:
-                color = "#f44336"  # rojo
-
-            # Barra de progreso con color personalizado (usando st.markdown)
-            st.markdown(
-                f"""
-                <div style="background-color: #ddd; width: 100%; height: 24px; border-radius: 12px;">
-                    <div style="width: {bar}%; background-color: {color}; height: 24px; border-radius: 12px;"></div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            st.write(f"**Rendimiento Promedio:** {round(avg,2)}%")
-
-            suger = sub.apply(sugerencias, axis=1)
-            for i, s in enumerate(suger):
-                st.write(f"- Partida {i+1}: {s}")
     else:
         st.info("No hay partidas registradas")
 
-# — Sección RENDIMIENTO POR LÍNEA —
+# -- Sección FEEDBACK --
+elif seccion == tr["feedback"]:
+    st.header(tr["feedback"])
+    if st.session_state.partidas:
+        df = pd.concat(st.session_state.partidas, ignore_index=True)
+        st.write("Comentarios generales de partidas:")
+        comentarios = df[["Línea", "Comentarios"]].copy()
+        for idx, row in comentarios.iterrows():
+            st.markdown(f"**{row['Línea']}**: {row['Comentarios']}")
+    else:
+        st.info("No hay partidas registradas")
+
+# -- Sección RENDIMIENTO POR LÍNEA --
 elif seccion == tr["jugador"]:
     st.header(tr["jugador"])
     if st.session_state.partidas:
-        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        lin = st.selectbox("Selecciona Línea", lineas)
-        sub = df_all[df_all["Línea"] == lin]
+        df = pd.concat(st.session_state.partidas, ignore_index=True)
+        linea_sel = st.selectbox("Selecciona línea", lineas)
+        df_filtro = df[df["Línea"] == linea_sel].copy()
+        if not df_filtro.empty:
+            # Ordenar por partida para que salga ordenado en el eje X
+            # Asumimos que las partidas son del tipo "Partida 1", "Partida 2", ...
+            df_filtro["NumPartida"] = df_filtro["Partida"].str.extract(r"(\d+)").astype(int)
+            df_filtro = df_filtro.sort_values("NumPartida")
 
-        st.dataframe(sub[["Partida", "Rendimiento", "Oro", "Daño Infligido", "Participación (%)"]])
+            ch = alt.Chart(df_filtro).mark_line(point=True).encode(
+                x=alt.X("NumPartida:O", title="Partida"),
+                y=alt.Y("Rendimiento", scale=alt.Scale(domain=[0, 100])),
+                tooltip=["Partida", "Rendimiento"]
+            ).properties(
+                title=f"Rendimiento histórico de {linea_sel}",
+                width=700, height=300
+            )
+            st.altair_chart(ch, use_container_width=True)
 
-        ch = alt.Chart(sub).mark_line(point=True).encode(
-            x="Partida", y="Rendimiento",
-            tooltip=["Partida", "Rendimiento"]
-        ).properties(title=f"Rendimiento en {lin}", width=700, height=350)
-        st.altair_chart(ch, use_container_width=True)
+            st.subheader("Sugerencias para esta línea")
+            df_filtro["Sugerencias"] = df_filtro.apply(sugerencias, axis=1)
+            for i, row in df_filtro.iterrows():
+                st.markdown(f"**{row['Partida']}**: {row['Sugerencias']}")
+
+        else:
+            st.info("No hay datos para esta línea")
     else:
-        st.info("No hay datos para mostrar")
+        st.info("No hay partidas registradas")
 
-# — Exportar HTML —
-with st.sidebar.expander(tr["exportar"]):
-    if st.session_state.partidas:
-        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        html = df_all.to_html(index=False)
-
-        b64 = base64.b64encode(html.encode()).decode()
-        href = f'<a href="data:text/html;base64,{b64}" download="wolfseekers_registro.html">Descargar Registro HTML</a>'
-        st.markdown(href, unsafe_allow_html=True)
-    else:
-        st.info("No hay datos para exportar")
+# -- Exportar todas las partidas a HTML (botón en cualquier sección) --
+if st.session_state.partidas:
+    df_export = pd.concat(st.session_state.partidas, ignore_index=True)
+    html = df_export.to_html(index=False)
+    b64 = base64.b64encode(html.encode()).decode()
+    href = f'<a href="data:file/html;base64,{b64}" download="wse_tracker.html">📤 Descargar Reporte Completo (HTML)</a>'
+    st.markdown(href, unsafe_allow_html=True)
