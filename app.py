@@ -190,31 +190,28 @@ if seccion == tr["registro"]:
         st.session_state.contador += 1
         st.success(f"Partida {partida_id} guardada correctamente")
 
-# — Pestaña KDA —
+# — Pestaña KDA (registro total de muertes del día) —
 elif seccion == tr["kda"]:
-    st.header(tr["kda"])
-    if not st.session_state.partidas:
-        st.info("Primero debes registrar al menos una partida en la pestaña Registro")
-        st.stop()
+    st.header("📝 Registro de muertes totales del día")
 
-    partidas_existentes = [f"Partida {i+1}" for i in range(len(st.session_state.partidas))]
-    sel_partida = st.selectbox("Selecciona partida para ingresar KDA", partidas_existentes)
+    if "muertes_dia" not in st.session_state:
+        st.session_state.muertes_dia = []
 
-    ases = st.number_input("Asesinatos", 0, 20, step=1)
-    muer = st.number_input("Muertes", 0, 20, step=1)
-    asis = st.number_input("Asistencias", 0, 20, step=1)
-    linea_kda = st.selectbox("Línea para KDA", lineas)
+    muertes_totales = st.number_input("¿Cuántas veces moriste en total hoy?", min_value=0, step=1)
 
-    if st.button("Guardar KDA"):
-        # Actualizar partida en session_state
-        idx = int(sel_partida.split()[1]) - 1
-        df = st.session_state.partidas[idx]
-        # Actualizamos solo para la línea seleccionada
-        df.loc[df["Línea"]==linea_kda, ["Asesinatos","Muertes","Asistencias"]] = [ases, muer, asis]
-        # Recalcular rendimiento
-        df["Rendimiento"] = df.apply(calcular_puntaje, axis=1)
-        st.session_state.partidas[idx] = df
-        st.success(f"KDA guardado en {sel_partida} para {linea_kda}")
+    if st.button("Guardar muertes del día"):
+        fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+        st.session_state.muertes_dia.append({
+            "Fecha": fecha_hoy,
+            "Muertes Totales": muertes_totales
+        })
+        st.success("Muertes registradas correctamente")
+
+    # Mostrar historial de muertes
+    if st.session_state.muertes_dia:
+        st.subheader("Historial de muertes diarias")
+        df_muertes = pd.DataFrame(st.session_state.muertes_dia)
+        st.dataframe(df_muertes)
 
 # — Pestaña HISTORIAL —
 elif seccion == tr["historial"]:
