@@ -25,14 +25,14 @@ tr = {
     "guardar": "💾 Guardar partida",
     "exportar": "📤 Exportar a HTML",
     "rendimiento": "Rendimiento (%)",
-    "kda": "📝 Registro KDA"  # --- CAMBIO: nuevo menú
+    "kda": "📝 Registro KDA"
 }
 
 # — Sidebar de navegación —
 st.sidebar.title("Menú")
 seccion = st.sidebar.radio("", [
     tr["registro"],
-    tr["kda"],           # --- CAMBIO: nueva pestaña
+    tr["kda"],
     tr["historial"],
     tr["promedio"],
     tr["feedback"],
@@ -61,10 +61,8 @@ if "partidas" not in st.session_state:
     st.session_state.partidas = []
 if "contador" not in st.session_state:
     st.session_state.contador = 1
-if "kda_partidas" not in st.session_state:  # --- CAMBIO: lista para KDA por separado
+if "kda_partidas" not in st.session_state:
     st.session_state.kda_partidas = []
-if "kda_contador" not in st.session_state:
-    st.session_state.kda_contador = 1
 
 lineas = ["TOPLANER", "JUNGLA", "MIDLANER", "ADC", "SUPPORT"]
 
@@ -137,20 +135,28 @@ if seccion == tr["registro"]:
             datos.append({
                 "Línea": linea, "Oro": oro, "Daño Infligido": dano,
                 "Daño Recibido": rec, "Participación (%)": part,
-                # KDA eliminado de acá
                 "Comentarios": "; ".join(comentarios)
             })
     if st.button(tr["guardar"]):
         df = pd.DataFrame(datos)
-        df["Partida"] = f"Partida {st.session_state.contador}"
+        partida_id = st.session_state.contador
+        df["Partida"] = f"Partida {partida_id}"
         df["Rendimiento"] = df.apply(calcular_puntaje, axis=1)
         st.session_state.partidas.append(df)
         st.session_state.contador += 1
-        st.success("Partida guardada correctamente")
+        st.success(f"Partida {partida_id} guardada correctamente")
 
-# — Nueva pestaña para registrar solo KDA —  # --- CAMBIO: pestaña KDA ---
+# — Nueva pestaña para registrar solo KDA —  
 elif seccion == tr["kda"]:
     st.header(tr["kda"])
+    if not st.session_state.partidas:
+        st.info("Primero debes registrar al menos una partida en la pestaña Registro")
+        st.stop()
+
+    # Seleccionar para qué partida registrar KDA (basado en las partidas guardadas)
+    partidas_existentes = [f"Partida {i}" for i in range(1, st.session_state.contador)]
+    partida_sel = st.selectbox("Selecciona la Partida", partidas_existentes)
+
     datos_kda = []
     for linea in lineas:
         with st.expander(linea):
@@ -161,16 +167,16 @@ elif seccion == tr["kda"]:
             "Línea": linea,
             "Asesinatos": a,
             "Muertes": m,
-            "Asistencias": asi
+            "Asistencias": asi,
+            "Partida": partida_sel
         })
     if st.button("Guardar KDA"):
         df_kda = pd.DataFrame(datos_kda)
-        df_kda["Partida"] = f"Partida KDA {st.session_state.kda_contador}"
+        # En vez de aumentar contador aquí, usamos el mismo contador para partidas completas
         st.session_state.kda_partidas.append(df_kda)
-        st.session_state.kda_contador += 1
-        st.success("KDA guardado correctamente")
+        st.success(f"KDA guardado para {partida_sel}")
 
-# — Sección HISTORIAL — (mostramos ambos históricos separados)
+# — Sección HISTORIAL — (mostramos ambos históricos separados y unión de datos)  
 elif seccion == tr["historial"]:
     st.header(tr["historial"])
     if st.session_state.partidas or st.session_state.kda_partidas:
@@ -178,72 +184,62 @@ elif seccion == tr["historial"]:
             st.subheader("Partidas completas")
             hist = pd.concat(st.session_state.partidas, ignore_index=True)
             st.dataframe(hist)
+
         if st.session_state.kda_partidas:
             st.subheader("Registros solo de KDA")
             hist_kda = pd.concat(st.session_state.kda_partidas, ignore_index=True)
             st.dataframe(hist_kda)
+
+            # Unión de ambos por Partida y Línea para análisis conjunto
+            st.subheader("Datos combinados (por Partida y Línea)")
+            # Intentamos hacer merge si ambos tienen datos
+            try:
+                df_partidas = pd.concat(st.session_state.partidas, ignore_index=True)
+                df_kda = pd.concat(st.session_state.kda_partidas, ignore_index=True)
+                df_merge = pd.merge(df_partidas, df_kda, on=["Partida", "Línea"], how="outer")
+                st.dataframe(df_merge)
+            except Exception as e:
+                st.error(f"Error uniendo datos: {e}")
     else:
         st.info("No hay partidas registradas")
 
-# — Las demás secciones quedan igual —
-
+# — Sección PROMEDIO —
 elif seccion == tr["promedio"]:
     st.header(tr["promedio"])
     if st.session_state.partidas:
-        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        prom = df_all.groupby("Línea").mean(numeric_only=True).reset_index()
-        st.dataframe(prom)
-
-        vals = prom.melt("Línea", ["Oro", "Daño Infligido", "Daño Recibido"])
-        ch1 = alt.Chart(vals).mark_bar().encode(
-            x="Línea", y="value", color="variable"
-        ).properties(title="Valores Numéricos", width=600)
-        st.altair_chart(ch1, use_container_width=True)
-
-        pct = prom.melt("Línea", ["Participación (%)", "Rendimiento"])
-        ch2 = alt.Chart(pct).mark_bar().encode(
-            x="Línea", y="value", color="variable"
-        ).properties(title="Porcentajes", width=600)
-        st.altair_chart(ch2, use_container_width=True)
+        df = pd.concat(st.session_state.partidas, ignore_index=True)
+        # Calcular rendimiento promedio por línea
+        promedios = df.groupby("Línea")["Rendimiento"].mean().reset_index()
+        st.dataframe(promedios)
     else:
-        st.info("No hay datos para calcular promedio")
+        st.info("No hay datos para calcular promedios")
 
+# — Sección FEEDBACK —
 elif seccion == tr["feedback"]:
     st.header(tr["feedback"])
     if st.session_state.partidas:
-        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        for ln in lineas:
-            sub = df_all[df_all["Línea"] == ln]
-            avg = sub["Rendimiento"].mean()
-            st.subheader(ln)
-            bar = int(round(avg)) if pd.notna(avg) else 0
-            bar = max(0, min(bar, 100))
-            st.progress(bar)
-            st.write(f"**Rendimiento Promedio:** {round(avg,2)}%")
-            suger = sub.apply(sugerencias, axis=1)
-            for i, s in enumerate(suger):
-                st.write(f"- Partida {i+1}: {s}")
+        df = pd.concat(st.session_state.partidas, ignore_index=True)
+        problemas = df.groupby("Línea")["Comentarios"].apply(lambda x: "; ".join(x)).reset_index()
+        st.dataframe(problemas)
     else:
-        st.info("No hay partidas registradas")
+        st.info("No hay datos para feedback")
 
+# — Sección RENDIMIENTO POR LÍNEA —
 elif seccion == tr["jugador"]:
     st.header(tr["jugador"])
     if st.session_state.partidas:
-        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        lin = st.selectbox("Selecciona Línea", lineas)
-        sub = df_all[df_all["Línea"] == lin]
-        st.dataframe(sub)
+        df = pd.concat(st.session_state.partidas, ignore_index=True)
+        linea_sel = st.selectbox("Selecciona la Línea", lineas)
+        df_linea = df[df["Línea"] == linea_sel]
+        if not df_linea.empty:
+            chart = alt.Chart(df_linea).mark_bar().encode(
+                x="Partida",
+                y="Rendimiento",
+                tooltip=["Partida", "Rendimiento", "Comentarios"]
+            )
+            st.altair_chart(chart, use_container_width=True)
+        else:
+            st.info("No hay datos para esta línea")
     else:
         st.info("No hay datos para mostrar")
 
-# — Exportar todo a HTML —
-st.sidebar.markdown("---")
-if st.sidebar.button(tr["exportar"]):
-    if st.session_state.partidas:
-        df_all = pd.concat(st.session_state.partidas, ignore_index=True)
-        html = df_all.to_html()
-        b64 = base64.b64encode(html.encode()).decode()
-        href = f'<a href="data:file/html;base64,{b64}" download="partidas.html">Descargar partidas</a>'
-        st.sidebar.markdown(href, unsafe_allow_html=True)
-    else:
-        st.sidebar.info("No hay datos para exportar")
