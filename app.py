@@ -38,7 +38,7 @@ seccion = st.sidebar.radio("", [
     tr["jugador"]
 ])
 
-# — Login sencillo corregido —
+# — Login —
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -55,7 +55,7 @@ if not st.session_state.logged_in:
             st.error(msg)
     st.stop()
 
-# — Estructuras de datos en session_state —
+# — Datos iniciales —
 if "partidas" not in st.session_state:
     st.session_state.partidas = []
 if "contador" not in st.session_state:
@@ -63,20 +63,12 @@ if "contador" not in st.session_state:
 
 lineas = ["TOPLANER", "JUNGLA", "MIDLANER", "ADC", "SUPPORT"]
 
-# — Lista de problemas comunes para comentarios —
 problemas_comunes = [
-    "Poco farmeo",
-    "Mala visión / wards",
-    "Mal posicionamiento",
-    "Falta de roaming",
-    "Objetivos ignorados",
-    "Mal tradeo en línea",
-    "No seguimiento de ganks",
-    "Falta de comunicación",
-    "Teamfights descoordinadas"
+    "Poco farmeo", "Mala visión / wards", "Mal posicionamiento",
+    "Falta de roaming", "Objetivos ignorados", "Mal tradeo en línea",
+    "No seguimiento de ganks", "Falta de comunicación", "Teamfights descoordinadas"
 ]
 
-# — Pesos por rol para el cálculo de puntaje —
 pesos = {
     "TOPLANER": {"oro":0.2, "dano":0.3, "part":0.2, "kda":0.3},
     "JUNGLA":   {"oro":0.2, "dano":0.25,"part":0.25,"kda":0.3},
@@ -85,7 +77,6 @@ pesos = {
     "SUPPORT":  {"oro":0.1, "dano":0.1, "part":0.4, "kda":0.4}
 }
 
-# — Funciones centrales —
 def calcular_puntaje(fila):
     rol = fila["Línea"]
     p = pesos[rol]
@@ -111,7 +102,7 @@ def sugerencias(fila):
         msgs.append("🔸 Mejora tu posicionamiento para no morir tanto.")
     return "\n".join(msgs) or "✅ Buen equilibrio de métricas."
 
-# — Sección REGISTRO —
+# — Registro —
 if seccion == tr["registro"]:
     st.header(tr["registro"])
     datos = []
@@ -124,12 +115,7 @@ if seccion == tr["registro"]:
             a = st.number_input("Asesinatos", 0, step=1, key=f"a_{linea}")
             m = st.number_input("Muertes", 0, step=1, key=f"m_{linea}")
             asi = st.number_input("Asistencias", 0, step=1, key=f"as_{linea}")
-            # multiselect de problemas comunes + otro
-            seleccion = st.multiselect(
-                "Problemas detectados",
-                problemas_comunes,
-                key=f"pc_{linea}"
-            )
+            seleccion = st.multiselect("Problemas detectados", problemas_comunes, key=f"pc_{linea}")
             otro = st.text_input("Otro problema (escribe aquí)", key=f"otro_{linea}")
             comentarios = seleccion.copy()
             if otro:
@@ -148,7 +134,7 @@ if seccion == tr["registro"]:
         st.session_state.contador += 1
         st.success("Partida guardada correctamente")
 
-# — Sección HISTORIAL —
+# — Historial —
 elif seccion == tr["historial"]:
     st.header(tr["historial"])
     if st.session_state.partidas:
@@ -157,7 +143,7 @@ elif seccion == tr["historial"]:
     else:
         st.info("No hay partidas registradas")
 
-# — Sección PROMEDIO y GRÁFICOS —
+# — Promedios —
 elif seccion == tr["promedio"]:
     st.header(tr["promedio"])
     if st.session_state.partidas:
@@ -165,14 +151,12 @@ elif seccion == tr["promedio"]:
         prom = df_all.groupby("Línea").mean(numeric_only=True).reset_index()
         st.dataframe(prom)
 
-        # Gráfico Altair de valores
         vals = prom.melt("Línea", ["Oro", "Daño Infligido", "Daño Recibido"])
         ch1 = alt.Chart(vals).mark_bar().encode(
             x="Línea", y="value", color="variable"
         ).properties(title="Valores Numéricos", width=600)
         st.altair_chart(ch1, use_container_width=True)
 
-        # Gráfico Altair de porcentajes
         pct = prom.melt("Línea", ["Participación (%)", "Rendimiento"])
         ch2 = alt.Chart(pct).mark_bar().encode(
             x="Línea", y="value", color="variable"
@@ -181,7 +165,7 @@ elif seccion == tr["promedio"]:
     else:
         st.info("No hay datos para calcular promedio")
 
-# — Sección FEEDBACK DETALLADO —
+# — Feedback —
 elif seccion == tr["feedback"]:
     st.header(tr["feedback"])
     if st.session_state.partidas:
@@ -190,18 +174,15 @@ elif seccion == tr["feedback"]:
             sub = df_all[df_all["Línea"] == ln]
             avg = sub["Rendimiento"].mean()
             st.subheader(ln)
-
-            # Clamp y manejo de NaN
             bar = int(round(avg)) if pd.notna(avg) else 0
             bar = max(0, min(bar, 100))
-
             st.progress(bar)
             st.write(f"**Rendimiento Promedio:** {round(avg or 0, 2)}%")
             st.write(sugerencias(sub.iloc[-1]))
     else:
         st.info("Registra al menos una partida")
 
-# — Sección RENDIMIENTO POR JUGADOR —
+# — Comparativa por jugador —
 elif seccion == tr["jugador"]:
     st.header(tr["jugador"])
     if st.session_state.partidas:
@@ -217,61 +198,42 @@ elif seccion == tr["jugador"]:
     else:
         st.info("No hay datos para graficar")
 
-# — Exportar a HTML corregido con fecha —
+# — Exportar a HTML —
 st.sidebar.markdown("---")
 if st.sidebar.button(tr["exportar"]):
     if st.session_state.partidas:
-        # Fecha de hoy
-        hoy = datetime.now().strftime("%Y-%m-%d")
-        # Consolidar y calcular promedios
         df_all = pd.concat(st.session_state.partidas, ignore_index=True)
         prom = df_all.groupby("Línea").mean(numeric_only=True).reset_index()
-
-        # Gráfico estático
         fig, ax = plt.subplots(figsize=(8, 4))
-        ax.bar(prom["Línea"], prom["Rendimiento"])
-        plt.xticks(rotation=45)
+        ax.bar(prom["Línea"], prom["Rendimiento"], color='skyblue')
+        ax.set_ylabel("Rendimiento (%)")
+        ax.set_title("Promedio por Línea")
+        ax.set_ylim(0, 100)
         plt.tight_layout()
-        fp = "temp_promedio.png"
-        fig.savefig(fp, bbox_inches="tight")
-        plt.close(fig)
 
-        # Convertir imagen a base64
-        with open(fp, "rb") as imgf:
-            img_b64 = base64.b64encode(imgf.read()).decode("utf-8")
+        # Guardar gráfico temporal
+        img_path = "/tmp/grafico.png"
+        plt.savefig(img_path)
 
-        # Construir HTML con fecha
-        html_content = f"""
+        with open(img_path, "rb") as f:
+            img_bytes = f.read()
+        img_b64 = base64.b64encode(img_bytes).decode()
+
+        # HTML básico
+        html = f"""
         <html>
-        <head>
-            <meta charset="utf-8">
-            <title>Reporte Diario de Rendimiento</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; padding: 20px; }}
-                h1 {{ text-align: center; }}
-                table {{ border-collapse: collapse; width: 100%; margin-bottom: 20px; }}
-                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: center; }}
-                th {{ background-color: #f2f2f2; }}
-                img {{ display: block; margin: 0 auto; }}
-            </style>
-        </head>
+        <head><meta charset="utf-8"><title>Reporte WOLF SEEKERS</title></head>
         <body>
-            <h1>Reporte Diario de Rendimiento</h1>
-            <p style="text-align:center;"><strong>Fecha:</strong> {hoy}</p>
-            {prom.to_html(index=False, justify='center')}
-            <h2 style="text-align: center;">{tr['grafico']}</h2>
-            <img src="data:image/png;base64,{img_b64}" width="600" alt="Gráfico Promedio"/>
+            <h2>Reporte Diario - {datetime.now().strftime('%Y-%m-%d')}</h2>
+            <h3>Promedio de Rendimiento</h3>
+            {prom.to_html(index=False)}
+            <br>
+            <img src="data:image/png;base64,{img_b64}" width="700">
         </body>
         </html>
         """
-
-        # Botón de descarga
-        st.sidebar.success("HTML generado")
-        st.sidebar.download_button(
-            label="📥 Descargar Reporte HTML",
-            data=html_content,
-            file_name=f"reporte_{hoy}.html",
-            mime="text/html"
-        )
+        b64 = base64.b64encode(html.encode()).decode()
+        href = f'<a href="data:text/html;base64,{b64}" download="reporte.html">📥 Descargar reporte</a>'
+        st.markdown(href, unsafe_allow_html=True)
     else:
-        st.sidebar.warning("Nada para exportar")
+        st.warning("No hay partidas para exportar")
