@@ -7,7 +7,7 @@ from io import BytesIO
 import matplotlib.pyplot as plt
 
 # — Diccionario de usuarios y contraseñas —
-USUARIOS = {"Tivi": "2107", "Ghost": "203"}
+USUARIOS = {"Tivi": "2107", "Ghost": "203", "sub": "2025"}
 
 def login(username, password):
     if username in USUARIOS and USUARIOS[username] == password:
